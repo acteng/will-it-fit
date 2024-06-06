@@ -24,7 +24,7 @@ impl Backend {
     }
 
     /// Takes GeoJSON with LineStrings
-    #[wasm_bindgen(js_name = exampleCall)]
+    #[wasm_bindgen()]
     pub fn query(&self, input: String) -> Result<String, JsValue> {
         let input: Vec<Input> =
             geojson::de::deserialize_feature_collection_str_to_vec(&input).map_err(err_to_js)?;

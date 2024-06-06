@@ -10,6 +10,7 @@ crate-type = ["cdylib", "rlib"]
 anyhow = "1.0.86"
 console_error_panic_hook = "0.1.6"
 console_log = "1.0.0"
+flatgeobuf = { version = "4.2.0", default-features = false }
 geo = "0.28.0"
 geojson = { version = "0.24.1", features = ["geo-types"] }
 log = "0.4.20"
