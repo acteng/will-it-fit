@@ -10,11 +10,22 @@
   import { routeGj } from "./input";
   import { loadAuthorities, getBestMatch } from "./match_area";
   import { onMount } from "svelte";
+  import { init, RouteTool } from "route-snapper-ts";
+  import { writable, type Writable } from "svelte/store";
+  import type { Feature, Polygon } from "geojson";
+  import { routeToolGj, snapMode, undoLength } from "./snapper/stores";
+  import RouteSnapperLayer from "./snapper/RouteSnapperLayer.svelte";
 
-  onMount(loadAuthorities);
+  onMount(async () => {
+    await init();
+    await loadAuthorities();
+  });
 
   let map: Map;
   let requiredWidth = 30;
+
+  let routeAuthority: Feature<Polygon> | null = null;
+  let routeTool: Writable<RouteTool | null> = writable(null);
 
   let resultsGj = {
     type: "FeatureCollection" as const,
@@ -33,8 +44,22 @@
     }
   }
 
-  function getRouteSnapper() {
-    window.alert(getBestMatch(map));
+  async function getRouteSnapper() {
+    routeAuthority = getBestMatch(map);
+    let authority = `${routeAuthority.properties.level}_${routeAuthority.properties.name}`;
+    let url = `https://atip.uk/route-snappers/v2.6/${authority}.bin.gz`;
+    let resp = await fetch(url);
+    let bytes = await resp.arrayBuffer();
+
+    routeTool.set(
+      new RouteTool(
+        map,
+        new Uint8Array(bytes),
+        routeToolGj,
+        snapMode,
+        undoLength,
+      ),
+    );
   }
 </script>
 
@@ -46,7 +71,11 @@
   </label>
 </div>
 <button on:click={snap}>Get width along route</button>
-<button on:click={getRouteSnapper}>Get route snapper</button>
+<button on:click={getRouteSnapper}>
+  Get route snapper
+  {#if routeAuthority}(currently {routeAuthority.properties.name} ({routeAuthority
+      .properties.level})){/if}
+</button>
 
 <div style="height: 90vh; position: relative">
   <MapLibre
@@ -54,6 +83,14 @@
     hash
     bind:map
   >
+    {#if routeAuthority}
+      <GeoJSON data={routeAuthority}>
+        <LineLayer paint={{ "line-color": "black", "line-width": 5 }} />
+      </GeoJSON>
+    {/if}
+
+    <RouteSnapperLayer />
+
     <GeoJSON data={routeGj}>
       <LineLayer paint={{ "line-color": "blue", "line-width": 5 }} />
     </GeoJSON>

@@ -1,5 +1,5 @@
 import type { Map } from "svelte-maplibre";
-import type { Polygon, FeatureCollection } from "geojson";
+import type { Polygon, Feature, FeatureCollection } from "geojson";
 import authoritiesUrl from "../assets/authorities.geojson?url";
 import area from "@turf/area";
 import intersect from "@turf/intersect";
@@ -22,7 +22,7 @@ export async function loadAuthorities() {
   authorities = gj;
 }
 
-export function getBestMatch(map: Map): string {
+export function getBestMatch(map: Map): Feature<Polygon> {
   let b = map.getBounds();
   let bbox = polygon([
     [
@@ -48,5 +48,5 @@ export function getBestMatch(map: Map): string {
       best = f;
     }
   }
-  return `${best.properties.level}_${best.properties.name}`;
+  return best;
 }
