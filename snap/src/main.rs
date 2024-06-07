@@ -1,6 +1,7 @@
 use std::fs::File;
 use std::io::BufReader;
 
+use actix_web::{post, App, HttpResponse, HttpServer, Responder};
 use anyhow::{bail, Result};
 use flatgeobuf::{
     FallibleStreamingIterator, FeatureProperties, FgbFeature, FgbReader, GeozeroGeometry,
@@ -13,10 +14,28 @@ use crate::network::{Network, Road};
 
 mod network;
 
-fn main() -> Result<()> {
+#[post("/")]
+async fn snap(req_body: String) -> impl Responder {
+    // TODO errors
+    let input_route = read_gj_input(req_body).unwrap();
+    let network = read_nearby_roads(&input_route, "/home/dabreegster/road_widths.fgb").unwrap();
+    let resp = network.snap_route(input_route).unwrap();
+    HttpResponse::Ok().body(resp)
+}
+
+#[actix_web::main]
+async fn main() -> std::io::Result<()> {
+    HttpServer::new(|| App::new().service(snap))
+        .bind(("127.0.0.1", 8080))?
+        .run()
+        .await
+}
+
+fn old_main() -> Result<()> {
     let args: Vec<String> = std::env::args().collect();
 
-    let input_route = read_gj_input(&args[1])?;
+    let gj_input = std::fs::read_to_string(&args[1])?;
+    let input_route = read_gj_input(gj_input)?;
     let network = read_nearby_roads(&input_route, &args[2])?;
     if false {
         println!("{}", network.debug_roads()?);
@@ -26,14 +45,13 @@ fn main() -> Result<()> {
     Ok(())
 }
 
-fn read_gj_input(path: &str) -> Result<LineString> {
+fn read_gj_input(gj_input: String) -> Result<LineString> {
     #[derive(Deserialize)]
     struct Input {
         #[serde(deserialize_with = "deserialize_geometry")]
         geometry: LineString,
     }
 
-    let gj_input = std::fs::read_to_string(path)?;
     let mut input: Vec<Input> = geojson::de::deserialize_feature_collection_str_to_vec(&gj_input)?;
     if input.len() != 1 {
         bail!("Expecting exactly one LineString, found {}", input.len());

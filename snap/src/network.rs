@@ -22,7 +22,6 @@ pub struct Network {
     intersections: HashSet<Intersection>,
 
     // usize is edge idx
-    // TODO
     graph: UnGraphMap<Intersection, usize>,
 }
 
