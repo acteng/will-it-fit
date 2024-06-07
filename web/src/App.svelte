@@ -8,6 +8,8 @@
   } from "svelte-maplibre";
   import { routeGj } from "./input";
 
+  let requiredWidth = 30;
+
   let resultsGj = {
     type: "FeatureCollection",
     features: [],
@@ -27,6 +29,12 @@
 </script>
 
 <h1>Will it fit?</h1>
+<div>
+  <label>
+    Required width (m):
+    <input type="number" bind:value={requiredWidth} />
+  </label>
+</div>
 <button on:click={snap}>Get width along route</button>
 
 <div style="height: 90vh; position: relative">
@@ -35,14 +43,19 @@
     hash
   >
     <GeoJSON data={routeGj}>
-      <LineLayer paint={{ "line-color": "red", "line-width": 5 }} />
+      <LineLayer paint={{ "line-color": "blue", "line-width": 5 }} />
     </GeoJSON>
 
     <GeoJSON data={resultsGj} generateId>
       <LineLayer
         manageHoverState
         paint={{
-          "line-color": "blue",
+          "line-color": [
+            "case",
+            ["<=", ["get", "avg_width"], requiredWidth],
+            "red",
+            "green",
+          ],
           "line-width": 5,
           "line-opacity": hoverStateFilter(1.0, 0.5),
         }}
