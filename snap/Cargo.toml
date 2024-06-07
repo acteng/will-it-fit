@@ -4,6 +4,7 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
+actix-cors = "0.7.0"
 actix-web = "4"
 anyhow = "1.0.86"
 flatgeobuf = { version = "4.2.0", default-features = false }

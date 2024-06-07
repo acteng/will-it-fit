@@ -1,6 +1,7 @@
 use std::fs::File;
 use std::io::BufReader;
 
+use actix_cors::Cors;
 use actix_web::{post, App, HttpResponse, HttpServer, Responder};
 use anyhow::{bail, Result};
 use flatgeobuf::{
@@ -25,7 +26,7 @@ async fn snap(req_body: String) -> impl Responder {
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
-    HttpServer::new(|| App::new().service(snap))
+    HttpServer::new(|| App::new().wrap(Cors::permissive()).service(snap))
         .bind(("127.0.0.1", 8080))?
         .run()
         .await

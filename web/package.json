@@ -28,5 +28,6 @@
     "vite-plugin-wasm-pack": "0.1.11"
   },
   "dependencies": {
+    "svelte-maplibre": "^0.9.7"
   }
 }
