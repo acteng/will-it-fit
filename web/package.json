@@ -28,6 +28,9 @@
     "vite-plugin-wasm-pack": "0.1.11"
   },
   "dependencies": {
+    "@turf/area": "^7.0.0",
+    "@turf/helpers": "^7.0.0",
+    "@turf/intersect": "^7.0.0",
     "svelte-maplibre": "^0.9.7"
   }
 }

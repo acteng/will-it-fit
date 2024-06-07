@@ -5,13 +5,19 @@
     MapLibre,
     Popup,
     hoverStateFilter,
+    type Map,
   } from "svelte-maplibre";
   import { routeGj } from "./input";
+  import { loadAuthorities, getBestMatch } from "./match_area";
+  import { onMount } from "svelte";
 
+  onMount(loadAuthorities);
+
+  let map: Map;
   let requiredWidth = 30;
 
   let resultsGj = {
-    type: "FeatureCollection",
+    type: "FeatureCollection" as const,
     features: [],
   };
 
@@ -26,6 +32,10 @@
       window.alert(err);
     }
   }
+
+  function getRouteSnapper() {
+    window.alert(getBestMatch(map));
+  }
 </script>
 
 <h1>Will it fit?</h1>
@@ -36,11 +46,13 @@
   </label>
 </div>
 <button on:click={snap}>Get width along route</button>
+<button on:click={getRouteSnapper}>Get route snapper</button>
 
 <div style="height: 90vh; position: relative">
   <MapLibre
     style="https://api.maptiler.com/maps/streets/style.json?key=MZEJTanw3WpxRvt7qDfo"
     hash
+    bind:map
   >
     <GeoJSON data={routeGj}>
       <LineLayer paint={{ "line-color": "blue", "line-width": 5 }} />

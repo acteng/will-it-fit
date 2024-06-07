@@ -1,5 +1,5 @@
 export let routeGj = {
-  type: "FeatureCollection",
+  type: "FeatureCollection" as const,
   features: [
     {
       geometry: {
