@@ -5,16 +5,23 @@ use anyhow::{bail, Result};
 use flatgeobuf::{
     FallibleStreamingIterator, FeatureProperties, FgbFeature, FgbReader, GeozeroGeometry,
 };
-use geo::{BoundingRect, Geometry, LineString};
-use geojson::{de::deserialize_geometry, ser::serialize_geometry};
-use serde::{Deserialize, Serialize};
+use geo::{BoundingRect, Geometry, HaversineLength, LineString};
+use geojson::de::deserialize_geometry;
+use serde::Deserialize;
+
+use crate::network::{Network, Road};
+
+mod network;
 
 fn main() -> Result<()> {
     let args: Vec<String> = std::env::args().collect();
 
     let input_route = read_gj_input(&args[1])?;
-    let raw_roads = read_nearby_roads(&input_route, &args[2])?;
-    debug_roads(&raw_roads)?;
+    let network = read_nearby_roads(&input_route, &args[2])?;
+    if false {
+        println!("{}", network.debug_roads()?);
+    }
+    println!("{}", network.snap_route(input_route)?);
 
     Ok(())
 }
@@ -34,15 +41,7 @@ fn read_gj_input(path: &str) -> Result<LineString> {
     Ok(input.pop().unwrap().geometry)
 }
 
-#[derive(Serialize)]
-struct Road {
-    #[serde(serialize_with = "serialize_geometry")]
-    geometry: LineString,
-    min_width: f64,
-    avg_width: f64,
-}
-
-fn read_nearby_roads(route: &LineString, fgb_path: &str) -> Result<Vec<Road>> {
+fn read_nearby_roads(route: &LineString, fgb_path: &str) -> Result<Network> {
     let bbox = route.bounding_rect().unwrap();
     let mut file = BufReader::new(File::open(fgb_path)?);
     let mut fgb = FgbReader::open(&mut file)?.select_bbox(
@@ -52,16 +51,19 @@ fn read_nearby_roads(route: &LineString, fgb_path: &str) -> Result<Vec<Road>> {
         bbox.max().y,
     )?;
 
-    let mut roads = Vec::new();
+    let mut network = Network::new();
     // TODO Is there some serde magic?
     while let Some(feature) = fgb.next()? {
-        roads.push(Road {
-            geometry: get_linestring(feature)?,
+        let geometry = get_linestring(feature)?;
+        let length = geometry.haversine_length();
+        network.add_road(Road {
+            geometry,
             min_width: feature.property::<f64>("minimum").unwrap(),
             avg_width: feature.property::<f64>("average").unwrap(),
+            length,
         });
     }
-    Ok(roads)
+    Ok(network)
 }
 
 fn get_linestring(f: &FgbFeature) -> Result<LineString> {
@@ -71,12 +73,4 @@ fn get_linestring(f: &FgbFeature) -> Result<LineString> {
         Geometry::LineString(ls) => Ok(ls),
         _ => bail!("Wrong type in fgb"),
     }
-}
-
-fn debug_roads(roads: &Vec<Road>) -> Result<()> {
-    println!(
-        "{}",
-        geojson::ser::to_feature_collection_string(roads)?.to_string()
-    );
-    Ok(())
 }
