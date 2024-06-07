@@ -1248,6 +1248,7 @@ dependencies = [
  "geozero",
  "petgraph",
  "serde",
+ "serde_json",
 ]
 
 [[package]]

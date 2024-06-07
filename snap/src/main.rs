@@ -17,11 +17,17 @@ mod network;
 
 #[post("/")]
 async fn snap(req_body: String) -> impl Responder {
-    // TODO errors
-    let input_route = read_gj_input(req_body).unwrap();
-    let network = read_nearby_roads(&input_route, "/home/dabreegster/road_widths.fgb").unwrap();
-    let resp = network.snap_route(input_route).unwrap();
-    HttpResponse::Ok().body(resp)
+    match (|| {
+        let input_route = read_gj_input(req_body)?;
+        let network = read_nearby_roads(&input_route, "/home/dabreegster/road_widths.fgb")?;
+        network.snap_route(input_route)
+    })() {
+        Ok(resp) => HttpResponse::Ok().body(resp),
+        // TODO Maybe an error code would be nicer
+        Err(err) => {
+            HttpResponse::Ok().body(serde_json::json!({"error": err.to_string()}).to_string())
+        }
+    }
 }
 
 #[actix_web::main]
@@ -30,20 +36,6 @@ async fn main() -> std::io::Result<()> {
         .bind(("127.0.0.1", 8080))?
         .run()
         .await
-}
-
-fn old_main() -> Result<()> {
-    let args: Vec<String> = std::env::args().collect();
-
-    let gj_input = std::fs::read_to_string(&args[1])?;
-    let input_route = read_gj_input(gj_input)?;
-    let network = read_nearby_roads(&input_route, &args[2])?;
-    if false {
-        println!("{}", network.debug_roads()?);
-    }
-    println!("{}", network.snap_route(input_route)?);
-
-    Ok(())
 }
 
 fn read_gj_input(gj_input: String) -> Result<LineString> {

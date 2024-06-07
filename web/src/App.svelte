@@ -43,7 +43,13 @@
         method: "POST",
         body: JSON.stringify(routeGj),
       });
-      resultsGj = await resp.json();
+      let json = await resp.json();
+      if (json.error) {
+        resultsGj.features = [];
+        window.alert(json.error);
+      } else {
+        resultsGj = json;
+      }
     } catch (err) {
       window.alert(err);
     }
@@ -67,8 +73,10 @@
     );
   }
 
-  function startDrawing() {
+  function startDrawing(edit: boolean) {
+    let copy = JSON.parse(JSON.stringify(routeGj));
     routeGj.features = [];
+    resultsGj.features = [];
     drawingRoute = true;
 
     $routeTool!.addEventListenerSuccess((feature) => {
@@ -80,7 +88,12 @@
       drawingRoute = false;
       $routeTool!.clearEventListeners();
     });
-    $routeTool!.startRoute();
+
+    if (edit) {
+      $routeTool!.editExistingRoute(copy.features[0]);
+    } else {
+      $routeTool!.startRoute();
+    }
   }
 </script>
 
@@ -96,10 +109,18 @@
   </div>
   <div>
     <button
-      on:click={startDrawing}
+      on:click={() => startDrawing(false)}
       disabled={drawingRoute || $routeTool == null}
     >
       Draw a route
+    </button>
+    <button
+      on:click={() => startDrawing(true)}
+      disabled={drawingRoute ||
+        $routeTool == null ||
+        routeGj.features.length == 0}
+    >
+      Edit this route
     </button>
   </div>
   {#if drawingRoute}
