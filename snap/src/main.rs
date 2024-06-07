@@ -15,7 +15,7 @@ use crate::network::{Network, Road};
 
 mod network;
 
-#[post("/")]
+#[post("/snap")]
 async fn snap(req_body: String) -> impl Responder {
     match (|| {
         let input_route = read_gj_input(req_body)?;
@@ -30,12 +30,32 @@ async fn snap(req_body: String) -> impl Responder {
     }
 }
 
+#[post("/debug")]
+async fn debug(req_body: String) -> impl Responder {
+    match (|| {
+        let input_route = read_gj_input(req_body)?;
+        let network = read_nearby_roads(&input_route, "/home/dabreegster/road_widths.fgb")?;
+        network.debug_roads()
+    })() {
+        Ok(resp) => HttpResponse::Ok().body(resp),
+        Err(err) => {
+            println!("/debug broke unexpectedly: {err}");
+            HttpResponse::Ok().body("")
+        }
+    }
+}
+
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
-    HttpServer::new(|| App::new().wrap(Cors::permissive()).service(snap))
-        .bind(("127.0.0.1", 8080))?
-        .run()
-        .await
+    HttpServer::new(|| {
+        App::new()
+            .wrap(Cors::permissive())
+            .service(snap)
+            .service(debug)
+    })
+    .bind(("127.0.0.1", 8080))?
+    .run()
+    .await
 }
 
 fn read_gj_input(gj_input: String) -> Result<LineString> {

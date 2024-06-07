@@ -39,7 +39,7 @@
 
   async function snap() {
     try {
-      let resp = await fetch("http://localhost:8080", {
+      let resp = await fetch("http://localhost:8080/snap", {
         method: "POST",
         body: JSON.stringify(routeGj),
       });
@@ -53,6 +53,14 @@
     } catch (err) {
       window.alert(err);
     }
+  }
+
+  async function debugRoads() {
+    let resp = await fetch("http://localhost:8080/debug", {
+      method: "POST",
+      body: JSON.stringify(routeGj),
+    });
+    resultsGj = await resp.json();
   }
 
   async function getRouteSnapper() {
@@ -138,6 +146,9 @@
   <button on:click={snap} disabled={routeGj.features.length == 0}>
     Get width along route
   </button>
+  <button on:click={debugRoads} disabled={routeGj.features.length == 0}>
+    Debug roads near here
+  </button>
 </div>
 
 <div style="height: 90vh; position: relative">
@@ -155,7 +166,7 @@
     <RouteSnapperLayer />
 
     <GeoJSON data={routeGj}>
-      <LineLayer paint={{ "line-color": "blue", "line-width": 5 }} />
+      <LineLayer paint={{ "line-color": "blue", "line-width": 8 }} />
     </GeoJSON>
 
     <GeoJSON data={resultsGj} generateId>
