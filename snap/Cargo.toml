@@ -1,0 +1,15 @@
+[package]
+name = "snap"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+anyhow = "1.0.86"
+flatgeobuf = { version = "4.2.0", default-features = false }
+geo = "0.28.0"
+geojson = { version = "0.24.1", features = ["geo-types"] }
+geozero = { version = "0.13.0", default-features = false, features = ["with-geo"] }
+serde = "1.0.188"
+
+[profile.dev.package."*"]
+opt-level = 3
