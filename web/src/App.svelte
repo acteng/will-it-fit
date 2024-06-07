@@ -7,14 +7,14 @@
     hoverStateFilter,
     type Map,
   } from "svelte-maplibre";
-  import { routeGj } from "./input";
   import { loadAuthorities, getBestMatch } from "./match_area";
   import { onMount } from "svelte";
   import { init, RouteTool } from "route-snapper-ts";
   import { writable, type Writable } from "svelte/store";
   import type { Feature, Polygon } from "geojson";
-  import { routeToolGj, snapMode, undoLength } from "./snapper/stores";
-  import RouteSnapperLayer from "./snapper/RouteSnapperLayer.svelte";
+  import { routeToolGj, snapMode, undoLength } from "./sketch/stores";
+  import RouteSnapperLayer from "./sketch/RouteSnapperLayer.svelte";
+  import RouteSnapperControls from "./sketch/RouteSnapperControls.svelte";
 
   onMount(async () => {
     await init();
@@ -26,7 +26,12 @@
 
   let routeAuthority: Feature<Polygon> | null = null;
   let routeTool: Writable<RouteTool | null> = writable(null);
+  let drawingRoute = false;
 
+  let routeGj = {
+    type: "FeatureCollection" as const,
+    features: [],
+  };
   let resultsGj = {
     type: "FeatureCollection" as const,
     features: [],
@@ -61,21 +66,58 @@
       ),
     );
   }
+
+  function startDrawing() {
+    routeGj.features = [];
+    drawingRoute = true;
+
+    $routeTool!.addEventListenerSuccess((feature) => {
+      routeGj.features = [feature];
+      drawingRoute = false;
+      $routeTool!.clearEventListeners();
+    });
+    $routeTool!.addEventListenerFailure(() => {
+      drawingRoute = false;
+      $routeTool!.clearEventListeners();
+    });
+    $routeTool!.startRoute();
+  }
 </script>
 
 <h1>Will it fit?</h1>
-<div>
-  <label>
-    Required width (m):
-    <input type="number" bind:value={requiredWidth} />
-  </label>
+
+<div style="border: 1px solid black; padding: 4px">
+  <div>
+    <button on:click={getRouteSnapper}>
+      Get route snapper
+      {#if routeAuthority}(currently {routeAuthority.properties.name} ({routeAuthority
+          .properties.level})){/if}
+    </button>
+  </div>
+  <div>
+    <button
+      on:click={startDrawing}
+      disabled={drawingRoute || $routeTool == null}
+    >
+      Draw a route
+    </button>
+  </div>
+  {#if drawingRoute}
+    <RouteSnapperControls route_tool={$routeTool} />
+  {/if}
 </div>
-<button on:click={snap}>Get width along route</button>
-<button on:click={getRouteSnapper}>
-  Get route snapper
-  {#if routeAuthority}(currently {routeAuthority.properties.name} ({routeAuthority
-      .properties.level})){/if}
-</button>
+
+<div style="border: 1px solid black; padding: 4px">
+  <div>
+    <label>
+      Required width (m):
+      <input type="number" bind:value={requiredWidth} />
+    </label>
+  </div>
+  <button on:click={snap} disabled={routeGj.features.length == 0}>
+    Get width along route
+  </button>
+</div>
 
 <div style="height: 90vh; position: relative">
   <MapLibre
