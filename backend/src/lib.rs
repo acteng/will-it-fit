@@ -2,6 +2,7 @@ use std::sync::Once;
 
 use geo::LineString;
 use geojson::de::deserialize_geometry;
+use flatgeobuf::HttpFgbReader;
 use serde::Deserialize;
 use wasm_bindgen::prelude::*;
 
@@ -30,11 +31,8 @@ impl Backend {
             geojson::de::deserialize_feature_collection_str_to_vec(&input).map_err(err_to_js)?;
         let linestrings: Vec<LineString> = input.into_iter().map(|x| x.geometry).collect();
 
-        let resp = reqwest::Client::new()
-            .get("http://localhost:5173/road_widths.fgb")
-            .send()
-            .await?;
-        Ok(format!("length {:?}", resp.content_length()))
+        let mut fgb = HttpFgbReader::open("http://localhost:5173/road_widths.fgb").await.map_err(err_to_js)?;
+        Ok(format!("header {:?}", fgb.header()))
     }
 }
 

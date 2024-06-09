@@ -10,11 +10,10 @@ crate-type = ["cdylib", "rlib"]
 anyhow = "1.0.86"
 console_error_panic_hook = "0.1.6"
 console_log = "1.0.0"
-flatgeobuf = { version = "4.2.0", default-features = false }
+flatgeobuf = { path = "/home/dabreegster/Downloads/flatgeobuf/src/rust" }
 geo = "0.28.0"
 geojson = { version = "0.24.1", features = ["geo-types"] }
 log = "0.4.20"
-reqwest = { version = "0.12.4", default-features = false }
 serde = "1.0.188"
 wasm-bindgen = "0.2.87"
 wasm-bindgen-futures = "0.4.42"
