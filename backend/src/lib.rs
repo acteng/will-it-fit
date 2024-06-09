@@ -14,35 +14,46 @@ mod network;
 
 static START: Once = Once::new();
 
-#[wasm_bindgen]
-pub struct Backend {}
+/// Takes GeoJSON with one LineString, snaps to the network, and returns a FeatureCollection
+/// with width breakdowns
+#[wasm_bindgen(js_name = snapRoads)]
+pub async fn snap_roads(input: String) -> Result<String, JsValue> {
+    // Panics shouldn't happen, but if they do, console.log them.
+    console_error_panic_hook::set_once();
+    START.call_once(|| {
+        console_log::init_with_level(log::Level::Info).unwrap();
+    });
 
-#[wasm_bindgen]
-impl Backend {
-    #[wasm_bindgen(constructor)]
-    pub fn new() -> Backend {
-        // Panics shouldn't happen, but if they do, console.log them.
-        console_error_panic_hook::set_once();
-        START.call_once(|| {
-            console_log::init_with_level(log::Level::Info).unwrap();
-        });
+    let input: Vec<Input> =
+        geojson::de::deserialize_feature_collection_str_to_vec(&input).map_err(err_to_js)?;
+    let linestrings: Vec<LineString> = input.into_iter().map(|x| x.geometry).collect();
+    let input_route = linestrings[0].clone();
 
-        Backend {}
-    }
+    let network = read_nearby_roads(&input_route, "http://localhost:5173/road_widths.fgb")
+        .await
+        .map_err(err_to_js)?;
+    network.snap_route(input_route).map_err(err_to_js)
+}
 
-    /// Takes GeoJSON with LineStrings
-    #[wasm_bindgen()]
-    pub async fn query(&self, input: String) -> Result<String, JsValue> {
-        let input: Vec<Input> =
-            geojson::de::deserialize_feature_collection_str_to_vec(&input).map_err(err_to_js)?;
-        let linestrings: Vec<LineString> = input.into_iter().map(|x| x.geometry).collect();
-        let input_route = linestrings[0].clone();
+/// Takes GeoJSON with one LineString, and returns a FeatureCollection of all roads in the
+/// network in the bounding box. Use to debug why a route isn't found.
+#[wasm_bindgen(js_name = debugRoads)]
+pub async fn debug_roads(input: String) -> Result<String, JsValue> {
+    // Panics shouldn't happen, but if they do, console.log them.
+    console_error_panic_hook::set_once();
+    START.call_once(|| {
+        console_log::init_with_level(log::Level::Info).unwrap();
+    });
 
-        let network = read_nearby_roads(&input_route, "http://localhost:5173/road_widths.fgb")
-            .await
-            .map_err(err_to_js)?;
-        network.snap_route(input_route).map_err(err_to_js)
-    }
+    let input: Vec<Input> =
+        geojson::de::deserialize_feature_collection_str_to_vec(&input).map_err(err_to_js)?;
+    let linestrings: Vec<LineString> = input.into_iter().map(|x| x.geometry).collect();
+    let input_route = linestrings[0].clone();
+
+    let network = read_nearby_roads(&input_route, "http://localhost:5173/road_widths.fgb")
+        .await
+        .map_err(err_to_js)?;
+    network.debug_roads().map_err(err_to_js)
 }
 
 fn err_to_js<E: std::fmt::Display>(err: E) -> JsValue {

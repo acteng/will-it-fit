@@ -15,7 +15,7 @@
   import { routeToolGj, snapMode, undoLength } from "./sketch/stores";
   import RouteSnapperLayer from "./sketch/RouteSnapperLayer.svelte";
   import RouteSnapperControls from "./sketch/RouteSnapperControls.svelte";
-  import initBackend, { Backend } from "backend";
+  import initBackend, { snapRoads, debugRoads } from "backend";
 
   onMount(async () => {
     await init();
@@ -41,14 +41,7 @@
 
   async function snap() {
     try {
-      /*let resp = await fetch("http://localhost:8080/snap", {
-        method: "POST",
-        body: JSON.stringify(routeGj),
-      });
-      let json = await resp.json();*/
-
-      let backend = new Backend();
-      let json = JSON.parse(await backend.query(JSON.stringify(routeGj)));
+      let json = JSON.parse(await snapRoads(JSON.stringify(routeGj)));
 
       if (json.error) {
         resultsGj.features = [];
@@ -61,12 +54,8 @@
     }
   }
 
-  async function debugRoads() {
-    let resp = await fetch("http://localhost:8080/debug", {
-      method: "POST",
-      body: JSON.stringify(routeGj),
-    });
-    resultsGj = await resp.json();
+  async function debug() {
+    resultsGj = JSON.parse(await debugRoads(JSON.stringify(routeGj)));
   }
 
   async function getRouteSnapper() {
@@ -152,7 +141,7 @@
   <button on:click={snap} disabled={routeGj.features.length == 0}>
     Get width along route
   </button>
-  <button on:click={debugRoads} disabled={routeGj.features.length == 0}>
+  <button on:click={debug} disabled={routeGj.features.length == 0}>
     Debug roads near here
   </button>
 </div>
