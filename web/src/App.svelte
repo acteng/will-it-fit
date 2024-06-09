@@ -41,11 +41,15 @@
 
   async function snap() {
     try {
-      let resp = await fetch("http://localhost:8080/snap", {
+      /*let resp = await fetch("http://localhost:8080/snap", {
         method: "POST",
         body: JSON.stringify(routeGj),
       });
-      let json = await resp.json();
+      let json = await resp.json();*/
+
+      let backend = new Backend();
+      let json = JSON.parse(await backend.query(JSON.stringify(routeGj)));
+
       if (json.error) {
         resultsGj.features = [];
         window.alert(json.error);
@@ -55,12 +59,6 @@
     } catch (err) {
       window.alert(err);
     }
-  }
-
-  async function wasmSnap() {
-    let backend = new Backend();
-    let resp = await backend.query(JSON.stringify(routeGj));
-    console.log(resp);
   }
 
   async function debugRoads() {
@@ -143,8 +141,6 @@
     <RouteSnapperControls route_tool={$routeTool} />
   {/if}
 </div>
-
-<button on:click={wasmSnap}>TMP: call WASM API</button>
 
 <div style="border: 1px solid black; padding: 4px">
   <div>
