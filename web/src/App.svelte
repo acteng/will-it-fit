@@ -15,9 +15,11 @@
   import { routeToolGj, snapMode, undoLength } from "./sketch/stores";
   import RouteSnapperLayer from "./sketch/RouteSnapperLayer.svelte";
   import RouteSnapperControls from "./sketch/RouteSnapperControls.svelte";
+  import initBackend, { Backend } from "backend";
 
   onMount(async () => {
     await init();
+    await initBackend();
     await loadAuthorities();
   });
 
@@ -53,6 +55,12 @@
     } catch (err) {
       window.alert(err);
     }
+  }
+
+  async function wasmSnap() {
+    let backend = new Backend();
+    let resp = await backend.query(JSON.stringify(routeGj));
+    console.log(resp);
   }
 
   async function debugRoads() {
@@ -135,6 +143,8 @@
     <RouteSnapperControls route_tool={$routeTool} />
   {/if}
 </div>
+
+<button on:click={wasmSnap}>TMP: call WASM API</button>
 
 <div style="border: 1px solid black; padding: 4px">
   <div>

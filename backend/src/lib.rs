@@ -25,12 +25,16 @@ impl Backend {
 
     /// Takes GeoJSON with LineStrings
     #[wasm_bindgen()]
-    pub fn query(&self, input: String) -> Result<String, JsValue> {
+    pub async fn query(&self, input: String) -> Result<String, JsValue> {
         let input: Vec<Input> =
             geojson::de::deserialize_feature_collection_str_to_vec(&input).map_err(err_to_js)?;
         let linestrings: Vec<LineString> = input.into_iter().map(|x| x.geometry).collect();
 
-        Ok(format!("got {} linestrings", linestrings.len()))
+        let resp = reqwest::Client::new()
+            .get("http://localhost:5173/road_widths.fgb")
+            .send()
+            .await?;
+        Ok(format!("length {:?}", resp.content_length()))
     }
 }
 
