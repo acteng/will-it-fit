@@ -258,6 +258,7 @@ dependencies = [
 [[package]]
 name = "flatgeobuf"
 version = "4.2.0"
+source = "git+https://github.com/dabreegster/flatgeobuf?branch=wasm_fix#c1845d20c01927d9ca24adddbef9d147c2814d94"
 dependencies = [
  "byteorder",
  "bytes",
