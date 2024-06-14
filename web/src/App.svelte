@@ -1,6 +1,7 @@
 <script lang="ts">
   import {
     LineLayer,
+    FillLayer,
     GeoJSON,
     MapLibre,
     Popup,
@@ -16,6 +17,7 @@
   import RouteSnapperLayer from "./sketch/RouteSnapperLayer.svelte";
   import RouteSnapperControls from "./sketch/RouteSnapperControls.svelte";
   import initBackend, { snapRoads, debugRoads } from "backend";
+  import { renderLanes } from "./lanes";
 
   onMount(async () => {
     await init();
@@ -39,6 +41,14 @@
     type: "FeatureCollection" as const,
     features: [],
   };
+
+  $: lanesGj =
+    routeGj.features.length > 0
+      ? renderLanes(routeGj.features[0], lanes)
+      : {
+          type: "FeatureCollection" as const,
+          features: [],
+        };
 
   async function snap() {
     try {
@@ -98,24 +108,6 @@
     } else {
       $routeTool!.startRoute();
     }
-  }
-
-  function laneConfig(lanes: string): [string, number, number][] {
-    let result = [];
-    // TODO Make | be offset 0
-    let widthSum = 0;
-    for (let code of lanes) {
-      let [color, width] = {
-        s: ["grey", 3],
-        c: ["green", 4],
-        b: ["red", 6],
-        d: ["black", 6],
-        "|": ["yellow", 1],
-      }[code];
-      result.push([color, width, widthSum]);
-      widthSum += width;
-    }
-    return result;
   }
 </script>
 
@@ -195,16 +187,12 @@
 
     <RouteSnapperLayer />
 
-    <GeoJSON data={routeGj}>
-      {#each laneConfig(lanes) as [color, width, offset]}
-        <LineLayer
-          paint={{
-            "line-color": color,
-            "line-width": width * 3,
-            "line-offset": offset * 3,
-          }}
-        />
-      {/each}
+    <GeoJSON data={lanesGj}>
+      <FillLayer
+        paint={{
+          "fill-color": ["get", "color"],
+        }}
+      />
     </GeoJSON>
 
     <GeoJSON data={resultsGj} generateId>
