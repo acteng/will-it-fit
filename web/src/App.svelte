@@ -25,6 +25,7 @@
 
   let map: Map;
   let requiredWidth = 30;
+  let lanes = "scbd|ds";
 
   let routeAuthority: Feature<Polygon> | null = null;
   let routeTool: Writable<RouteTool | null> = writable(null);
@@ -98,6 +99,24 @@
       $routeTool!.startRoute();
     }
   }
+
+  function laneConfig(lanes: string): [string, number, number][] {
+    let result = [];
+    // TODO Make | be offset 0
+    let widthSum = 0;
+    for (let code of lanes) {
+      let [color, width] = {
+        s: ["grey", 3],
+        c: ["green", 4],
+        b: ["red", 6],
+        d: ["black", 6],
+        "|": ["yellow", 1],
+      }[code];
+      result.push([color, width, widthSum]);
+      widthSum += width;
+    }
+    return result;
+  }
 </script>
 
 <h1>Will it fit?</h1>
@@ -138,6 +157,22 @@
       <input type="number" bind:value={requiredWidth} />
     </label>
   </div>
+  <div>
+    <label>
+      Street features from left-to-right (
+      <b>s</b>
+      idewalk,
+      <b>c</b>
+      ycle lane,
+      <b>b</b>
+      us lane,
+      <b>d</b>
+      riving lane,
+      <b>|</b>
+      center line):
+      <input type="text" bind:value={lanes} />
+    </label>
+  </div>
   <button on:click={snap} disabled={routeGj.features.length == 0}>
     Get width along route
   </button>
@@ -161,7 +196,15 @@
     <RouteSnapperLayer />
 
     <GeoJSON data={routeGj}>
-      <LineLayer paint={{ "line-color": "blue", "line-width": 8 }} />
+      {#each laneConfig(lanes) as [color, width, offset]}
+        <LineLayer
+          paint={{
+            "line-color": color,
+            "line-width": width * 3,
+            "line-offset": offset * 3,
+          }}
+        />
+      {/each}
     </GeoJSON>
 
     <GeoJSON data={resultsGj} generateId>
