@@ -45,6 +45,7 @@
     type: "FeatureCollection" as const,
     features: [],
   };
+  let lanesOpacity = 80;
 
   function loadRoute(): FeatureCollection<LineString> {
     let x = window.localStorage.getItem("will-it-fit");
@@ -190,6 +191,14 @@
     <button on:click={debug} disabled={routeGj.features.length == 0}>
       Debug roads near here
     </button>
+    <label>
+      Lanes opacity: <input
+        type="range"
+        min="0"
+        max="100"
+        bind:value={lanesOpacity}
+      />
+    </label>
   </div>
 
   <div slot="main" style="position: relative; width: 100%; height: 100vh;">
@@ -210,6 +219,7 @@
         <FillLayer
           paint={{
             "fill-color": ["get", "color"],
+            "fill-opacity": lanesOpacity / 100,
           }}
         />
       </GeoJSON>
