@@ -14,7 +14,12 @@
   import { onMount } from "svelte";
   import { init, RouteTool } from "route-snapper-ts";
   import { writable, type Writable } from "svelte/store";
-  import type { Feature, Polygon } from "geojson";
+  import type {
+    FeatureCollection,
+    LineString,
+    Feature,
+    Polygon,
+  } from "geojson";
   import { routeToolGj, snapMode, undoLength } from "./sketch/stores";
   import RouteSnapperLayer from "./sketch/RouteSnapperLayer.svelte";
   import RouteSnapperControls from "./sketch/RouteSnapperControls.svelte";
@@ -35,14 +40,23 @@
   let routeTool: Writable<RouteTool | null> = writable(null);
   let drawingRoute = false;
 
-  let routeGj = {
-    type: "FeatureCollection" as const,
-    features: [],
-  };
+  let routeGj = loadRoute();
   let resultsGj = {
     type: "FeatureCollection" as const,
     features: [],
   };
+
+  function loadRoute(): FeatureCollection<LineString> {
+    let x = window.localStorage.getItem("will-it-fit");
+    if (x) {
+      return JSON.parse(x);
+    }
+    return {
+      type: "FeatureCollection" as const,
+      features: [],
+    };
+  }
+  $: window.localStorage.setItem("will-it-fit", JSON.stringify(routeGj));
 
   $: lanesGj =
     routeGj.features.length > 0
