@@ -6,41 +6,34 @@
     FillLayer,
     GeoJSON,
     MapLibre,
-    Popup,
     hoverStateFilter,
     type Map,
   } from "svelte-maplibre";
-  import { loadAuthorities, getBestMatch } from "./match_area";
+  import { Popup } from "svelte-utils/map";
   import { onMount } from "svelte";
-  import { init, RouteTool } from "route-snapper-ts";
-  import { writable, type Writable } from "svelte/store";
   import type {
     FeatureCollection,
     LineString,
     Feature,
     Polygon,
   } from "geojson";
-  import { routeToolGj, snapMode, undoLength } from "./sketch/stores";
   import RouteSnapperLayer from "./sketch/RouteSnapperLayer.svelte";
-  import RouteSnapperControls from "./sketch/RouteSnapperControls.svelte";
-  import initBackend, { snapRoads, debugRoads } from "backend";
+  import init, { snapRoads, debugRoads } from "backend";
   import { renderLanes } from "./lanes";
+  import DrawRoute from "./DrawRoute.svelte";
 
   onMount(async () => {
     await init();
-    await initBackend();
-    await loadAuthorities();
   });
 
   let map: Map;
   let requiredWidth = 30;
   let lanes = "scbd|ds";
 
-  let routeAuthority: Feature<Polygon> | null = null;
-  let routeTool: Writable<RouteTool | null> = writable(null);
-  let drawingRoute = false;
-
   let routeGj = loadRoute();
+  let routeAuthority: Feature<Polygon, { name: string; level: string }> | null =
+    null;
+
   let resultsGj = {
     type: "FeatureCollection" as const,
     features: [],
@@ -85,79 +78,13 @@
   async function debug() {
     resultsGj = JSON.parse(await debugRoads(JSON.stringify(routeGj)));
   }
-
-  async function getRouteSnapper() {
-    routeAuthority = getBestMatch(map);
-    let authority = `${routeAuthority.properties.level}_${routeAuthority.properties.name}`;
-    let url = `https://atip.uk/route-snappers/v2.6/${authority}.bin.gz`;
-    let resp = await fetch(url);
-    let bytes = await resp.arrayBuffer();
-
-    routeTool.set(
-      new RouteTool(
-        map,
-        new Uint8Array(bytes),
-        routeToolGj,
-        snapMode,
-        undoLength,
-      ),
-    );
-  }
-
-  function startDrawing(edit: boolean) {
-    let copy = JSON.parse(JSON.stringify(routeGj));
-    routeGj.features = [];
-    resultsGj.features = [];
-    drawingRoute = true;
-
-    $routeTool!.addEventListenerSuccess((feature) => {
-      routeGj.features = [feature];
-      drawingRoute = false;
-      $routeTool!.clearEventListeners();
-    });
-    $routeTool!.addEventListenerFailure(() => {
-      drawingRoute = false;
-      $routeTool!.clearEventListeners();
-    });
-
-    if (edit) {
-      $routeTool!.editExistingRoute(copy.features[0]);
-    } else {
-      $routeTool!.startRoute();
-    }
-  }
 </script>
 
 <Layout>
   <div slot="left">
     <h1>Will it fit?</h1>
 
-    <div>
-      <button on:click={getRouteSnapper}>
-        Get route snapper
-        {#if routeAuthority}(currently {routeAuthority.properties.name} ({routeAuthority
-            .properties.level})){/if}
-      </button>
-    </div>
-    <div>
-      <button
-        on:click={() => startDrawing(false)}
-        disabled={drawingRoute || $routeTool == null}
-      >
-        Draw a route
-      </button>
-      <button
-        on:click={() => startDrawing(true)}
-        disabled={drawingRoute ||
-          $routeTool == null ||
-          routeGj.features.length == 0}
-      >
-        Edit this route
-      </button>
-    </div>
-    {#if drawingRoute}
-      <RouteSnapperControls route_tool={$routeTool} />
-    {/if}
+    <DrawRoute {map} bind:routeGj bind:routeAuthority />
 
     <hr />
     <hr />
@@ -238,8 +165,8 @@
             "line-opacity": hoverStateFilter(1.0, 0.5),
           }}
         >
-          <Popup openOn="hover" let:data>
-            <p>{JSON.stringify(data.properties)}</p>
+          <Popup openOn="hover" let:props>
+            <p>{JSON.stringify(props)}</p>
           </Popup>
         </LineLayer>
       </GeoJSON>

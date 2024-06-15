@@ -22,7 +22,9 @@ export async function loadAuthorities() {
   authorities = gj;
 }
 
-export function getBestMatch(map: Map): Feature<Polygon> {
+export function getBestMatch(
+  map: Map,
+): Feature<Polygon, { name: string; level: string }> {
   let b = map.getBounds();
   let bbox = polygon([
     [
