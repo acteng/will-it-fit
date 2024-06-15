@@ -1,4 +1,6 @@
 <script lang="ts">
+  import "@picocss/pico/css/pico.jade.min.css";
+  import { Layout } from "svelte-utils/two_column_layout";
   import {
     LineLayer,
     FillLayer,
@@ -111,108 +113,112 @@
   }
 </script>
 
-<h1>Will it fit?</h1>
+<Layout>
+  <div slot="left">
+    <h1>Will it fit?</h1>
 
-<div style="border: 1px solid black; padding: 4px">
-  <div>
-    <button on:click={getRouteSnapper}>
-      Get route snapper
-      {#if routeAuthority}(currently {routeAuthority.properties.name} ({routeAuthority
-          .properties.level})){/if}
-    </button>
-  </div>
-  <div>
-    <button
-      on:click={() => startDrawing(false)}
-      disabled={drawingRoute || $routeTool == null}
-    >
-      Draw a route
-    </button>
-    <button
-      on:click={() => startDrawing(true)}
-      disabled={drawingRoute ||
-        $routeTool == null ||
-        routeGj.features.length == 0}
-    >
-      Edit this route
-    </button>
-  </div>
-  {#if drawingRoute}
-    <RouteSnapperControls route_tool={$routeTool} />
-  {/if}
-</div>
-
-<div style="border: 1px solid black; padding: 4px">
-  <div>
-    <label>
-      Required width (m):
-      <input type="number" bind:value={requiredWidth} />
-    </label>
-  </div>
-  <div>
-    <label>
-      Street features from left-to-right (
-      <b>s</b>
-      idewalk,
-      <b>c</b>
-      ycle lane,
-      <b>b</b>
-      us lane,
-      <b>d</b>
-      riving lane,
-      <b>|</b>
-      center line):
-      <input type="text" bind:value={lanes} />
-    </label>
-  </div>
-  <button on:click={snap} disabled={routeGj.features.length == 0}>
-    Get width along route
-  </button>
-  <button on:click={debug} disabled={routeGj.features.length == 0}>
-    Debug roads near here
-  </button>
-</div>
-
-<div style="height: 90vh; position: relative">
-  <MapLibre
-    style="https://api.maptiler.com/maps/streets/style.json?key=MZEJTanw3WpxRvt7qDfo"
-    hash
-    bind:map
-  >
-    {#if routeAuthority}
-      <GeoJSON data={routeAuthority}>
-        <LineLayer paint={{ "line-color": "black", "line-width": 5 }} />
-      </GeoJSON>
+    <div>
+      <button on:click={getRouteSnapper}>
+        Get route snapper
+        {#if routeAuthority}(currently {routeAuthority.properties.name} ({routeAuthority
+            .properties.level})){/if}
+      </button>
+    </div>
+    <div>
+      <button
+        on:click={() => startDrawing(false)}
+        disabled={drawingRoute || $routeTool == null}
+      >
+        Draw a route
+      </button>
+      <button
+        on:click={() => startDrawing(true)}
+        disabled={drawingRoute ||
+          $routeTool == null ||
+          routeGj.features.length == 0}
+      >
+        Edit this route
+      </button>
+    </div>
+    {#if drawingRoute}
+      <RouteSnapperControls route_tool={$routeTool} />
     {/if}
 
-    <RouteSnapperLayer />
+    <hr />
+    <hr />
+    <hr />
 
-    <GeoJSON data={lanesGj}>
-      <FillLayer
-        paint={{
-          "fill-color": ["get", "color"],
-        }}
-      />
-    </GeoJSON>
+    <div>
+      <label>
+        Required width (m):
+        <input type="number" bind:value={requiredWidth} />
+      </label>
+    </div>
+    <div>
+      <label>
+        Street features from left-to-right (
+        <b>s</b>
+        idewalk,
+        <b>c</b>
+        ycle lane,
+        <b>b</b>
+        us lane,
+        <b>d</b>
+        riving lane,
+        <b>|</b>
+        center line):
+        <input type="text" bind:value={lanes} />
+      </label>
+    </div>
+    <button on:click={snap} disabled={routeGj.features.length == 0}>
+      Get width along route
+    </button>
+    <button on:click={debug} disabled={routeGj.features.length == 0}>
+      Debug roads near here
+    </button>
+  </div>
 
-    <GeoJSON data={resultsGj} generateId>
-      <LineLayer
-        manageHoverState
-        paint={{
-          "line-color": [
-            "case",
-            ["<=", ["get", "avg_width"], requiredWidth],
-            "red",
-            "green",
-          ],
-          "line-width": 5,
-          "line-opacity": hoverStateFilter(1.0, 0.5),
-        }}
-      >
-        <Popup openOn="hover" let:data>
-          <p>{JSON.stringify(data.properties)}</p>
-        </Popup>
-      </LineLayer>
-    </GeoJSON>
-  </MapLibre>
-</div>
+  <div slot="main" style="position: relative; width: 100%; height: 100vh;">
+    <MapLibre
+      style="https://api.maptiler.com/maps/streets/style.json?key=MZEJTanw3WpxRvt7qDfo"
+      hash
+      bind:map
+    >
+      {#if routeAuthority}
+        <GeoJSON data={routeAuthority}>
+          <LineLayer paint={{ "line-color": "black", "line-width": 5 }} />
+        </GeoJSON>
+      {/if}
+
+      <RouteSnapperLayer />
+
+      <GeoJSON data={lanesGj}>
+        <FillLayer
+          paint={{
+            "fill-color": ["get", "color"],
+          }}
+        />
+      </GeoJSON>
+
+      <GeoJSON data={resultsGj} generateId>
+        <LineLayer
+          manageHoverState
+          paint={{
+            "line-color": [
+              "case",
+              ["<=", ["get", "avg_width"], requiredWidth],
+              "red",
+              "green",
+            ],
+            "line-width": 5,
+            "line-opacity": hoverStateFilter(1.0, 0.5),
+          }}
+        >
+          <Popup openOn="hover" let:data>
+            <p>{JSON.stringify(data.properties)}</p>
+          </Popup>
+        </LineLayer>
+      </GeoJSON>
+    </MapLibre>
+  </div>
+</Layout>

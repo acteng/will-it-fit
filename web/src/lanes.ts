@@ -15,11 +15,11 @@ export function renderLanes(
   let widthSum = 0;
   for (let code of lanes) {
     let [color, width] = {
-      s: ["grey", 3],
-      c: ["green", 4],
-      b: ["red", 6],
-      d: ["black", 6],
-      "|": ["yellow", 1],
+      s: ["grey", 2],
+      c: ["green", 1.5],
+      b: ["red", 3.25],
+      d: ["black", 3],
+      "|": ["yellow", 0.5],
     }[code];
     let shifted = lineOffset(route, widthSum + width / 2, { units: "meters" });
     let buffered = buffer(shifted, width / 2, { units: "meters" });
