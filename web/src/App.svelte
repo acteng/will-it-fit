@@ -161,7 +161,7 @@
               "red",
               "green",
             ],
-            "line-width": 5,
+            "line-gap-width": 5,
             "line-opacity": hoverStateFilter(1.0, 0.5),
           }}
         >
