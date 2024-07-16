@@ -31,7 +31,7 @@
   async function getRouteSnapper() {
     routeAuthority = getBestMatch(map);
     let authority = `${routeAuthority.properties.level}_${routeAuthority.properties.name}`;
-    let url = `https://atip.uk/route-snappers/v2.6/${authority}.bin.gz`;
+    let url = `https://atip.uk/route-snappers/v3/${authority}.bin.gz`;
     let resp = await fetch(url);
     let bytes = await resp.arrayBuffer();
 
