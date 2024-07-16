@@ -1,7 +1,7 @@
 use anyhow::{bail, Result};
 use geo::{BoundingRect, LineString};
 use geojson::{Feature, GeoJson, Geometry};
-use utils::{Mercator, OffsetCurve};
+use utils::{buffer_linestring, Mercator, OffsetCurve};
 
 pub fn render_lanes(orig_wgs84: LineString, lanes: String) -> Result<String> {
     let mercator = Mercator::from(orig_wgs84.bounding_rect().unwrap()).unwrap();
@@ -23,8 +23,10 @@ pub fn render_lanes(orig_wgs84: LineString, lanes: String) -> Result<String> {
         let Some(shifted) = orig.offset_curve(width_sum + width / 2.0) else {
             bail!("couldn't shift line");
         };
-        // TODO buffer and make a polygon
-        let mut f = Feature::from(Geometry::from(&mercator.to_wgs84(&shifted)));
+        let Some(thickened) = buffer_linestring(&shifted, width / 2.0, width / 2.0) else {
+            bail!("couldn't thicken lane");
+        };
+        let mut f = Feature::from(Geometry::from(&mercator.to_wgs84(&thickened)));
         f.set_property("color", color);
         features.push(f);
 

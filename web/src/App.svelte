@@ -2,6 +2,7 @@
   import "@picocss/pico/css/pico.jade.min.css";
   import { Layout } from "svelte-utils/two_column_layout";
   import {
+    FillLayer,
     LineLayer,
     GeoJSON,
     MapLibre,
@@ -143,11 +144,10 @@
       <RouteSnapperLayer />
 
       <GeoJSON data={lanesGj}>
-        <LineLayer
+        <FillLayer
           paint={{
-            "line-color": ["get", "color"],
-            "line-width": 3,
-            "line-opacity": lanesOpacity / 100,
+            "fill-color": ["get", "color"],
+            "fill-opacity": lanesOpacity / 100,
           }}
         />
       </GeoJSON>

@@ -1438,7 +1438,7 @@ dependencies = [
 [[package]]
 name = "utils"
 version = "0.1.0"
-source = "git+https://github.com/a-b-street/utils#4151ebb843a6c3fb2312f91af2640311efc1b277"
+source = "git+https://github.com/a-b-street/utils#c17dbe2c0bc9c5fa0d9949754b1d0dd0a0abc8bb"
 dependencies = [
  "anyhow",
  "fast_paths",
