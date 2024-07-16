@@ -3,7 +3,6 @@
   import { Layout } from "svelte-utils/two_column_layout";
   import {
     LineLayer,
-    FillLayer,
     GeoJSON,
     MapLibre,
     hoverStateFilter,
@@ -18,12 +17,13 @@
     Polygon,
   } from "geojson";
   import RouteSnapperLayer from "./sketch/RouteSnapperLayer.svelte";
-  import init, { snapRoads, debugRoads } from "backend";
-  import { renderLanes } from "./lanes";
+  import init, { snapRoads, debugRoads, renderLanes } from "backend";
   import DrawRoute from "./DrawRoute.svelte";
 
+  let setupDone = false;
   onMount(async () => {
     await init();
+    setupDone = true;
   });
 
   let map: Map;
@@ -53,8 +53,8 @@
   $: window.localStorage.setItem("will-it-fit", JSON.stringify(routeGj));
 
   $: lanesGj =
-    routeGj.features.length > 0
-      ? renderLanes(routeGj.features[0], lanes)
+    routeGj.features.length > 0 && setupDone
+      ? JSON.parse(renderLanes(JSON.stringify(routeGj), lanes))
       : {
           type: "FeatureCollection" as const,
           features: [],
@@ -143,10 +143,11 @@
       <RouteSnapperLayer />
 
       <GeoJSON data={lanesGj}>
-        <FillLayer
+        <LineLayer
           paint={{
-            "fill-color": ["get", "color"],
-            "fill-opacity": lanesOpacity / 100,
+            "line-color": ["get", "color"],
+            "line-width": 3,
+            "line-opacity": lanesOpacity / 100,
           }}
         />
       </GeoJSON>

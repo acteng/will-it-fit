@@ -11,6 +11,7 @@ use wasm_bindgen::prelude::*;
 use crate::network::{Network, Road};
 
 mod network;
+mod render;
 
 static START: Once = Once::new();
 
@@ -54,6 +55,25 @@ pub async fn debug_roads(input: String) -> Result<String, JsValue> {
         .await
         .map_err(err_to_js)?;
     network.debug_roads().map_err(err_to_js)
+}
+
+/// Takes GeoJSON with one LineString and a string representing lane config, and returns a FeatureCollection
+/// with polygons per lane
+#[wasm_bindgen(js_name = renderLanes)]
+pub fn render_lanes(input_gj: String, lanes: String) -> Result<String, JsValue> {
+    // Panics shouldn't happen, but if they do, console.log them.
+    console_error_panic_hook::set_once();
+    START.call_once(|| {
+        console_log::init_with_level(log::Level::Info).unwrap();
+    });
+
+    // TODO take just one feature
+    let input: Vec<Input> =
+        geojson::de::deserialize_feature_collection_str_to_vec(&input_gj).map_err(err_to_js)?;
+    let linestrings: Vec<LineString> = input.into_iter().map(|x| x.geometry).collect();
+    let input_route = linestrings[0].clone();
+
+    render::render_lanes(input_route, lanes).map_err(err_to_js)
 }
 
 fn err_to_js<E: std::fmt::Display>(err: E) -> JsValue {
