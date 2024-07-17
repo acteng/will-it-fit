@@ -9,3 +9,7 @@ This is an experimental extension to the cross-section check tool. Given input d
 Split the route and indicate what cross sections fit where.
 
 Attempt to do all of this purely in the browser, leveraging cloud-native file formats for reading subsets of large input data.
+
+## Data prep notes
+
+`ogr2ogr -f flatgeobuf topo_areas.fgb -t_srs EPSG:4326 input.gpkg`

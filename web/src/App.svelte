@@ -18,7 +18,7 @@
     Polygon,
   } from "geojson";
   import RouteSnapperLayer from "./sketch/RouteSnapperLayer.svelte";
-  import init, { snapRoads, debugRoads, renderLanes } from "backend";
+  import init, { renderLanes, getNegativeSpace } from "backend";
   import DrawRoute from "./DrawRoute.svelte";
 
   let setupDone = false;
@@ -61,23 +61,12 @@
           features: [],
         };
 
-  async function snap() {
+  async function calculate() {
     try {
-      let json = JSON.parse(await snapRoads(JSON.stringify(routeGj)));
-
-      if (json.error) {
-        resultsGj.features = [];
-        window.alert(json.error);
-      } else {
-        resultsGj = json;
-      }
+      resultsGj = JSON.parse(await getNegativeSpace(JSON.stringify(routeGj)));
     } catch (err) {
       window.alert(err);
     }
-  }
-
-  async function debug() {
-    resultsGj = JSON.parse(await debugRoads(JSON.stringify(routeGj)));
   }
 </script>
 
@@ -113,11 +102,8 @@
         <input type="text" bind:value={lanes} />
       </label>
     </div>
-    <button on:click={snap} disabled={routeGj.features.length == 0}>
-      Get width along route
-    </button>
-    <button on:click={debug} disabled={routeGj.features.length == 0}>
-      Debug roads near here
+    <button on:click={calculate} disabled={routeGj.features.length == 0}>
+      Calculate
     </button>
     <label>
       Lanes opacity: <input
@@ -143,33 +129,31 @@
 
       <RouteSnapperLayer />
 
+      <GeoJSON data={routeGj}>
+        <LineLayer paint={{ "line-color": "red", "line-width": 5 }} />
+      </GeoJSON>
       <GeoJSON data={lanesGj}>
         <FillLayer
           paint={{
             "fill-color": ["get", "color"],
             "fill-opacity": lanesOpacity / 100,
           }}
+          layout={{
+            visibiliy: "none",
+          }}
         />
       </GeoJSON>
 
       <GeoJSON data={resultsGj} generateId>
-        <LineLayer
+        <FillLayer
           manageHoverState
           paint={{
-            "line-color": [
-              "case",
-              ["<=", ["get", "avg_width"], requiredWidth],
-              "red",
-              "green",
-            ],
-            "line-gap-width": 5,
-            "line-opacity": hoverStateFilter(1.0, 0.5),
+            "fill-color": "grey",
+            "fill-opacity": hoverStateFilter(0.5, 0.8),
           }}
         >
-          <Popup openOn="hover" let:props>
-            <p>{JSON.stringify(props)}</p>
-          </Popup>
-        </LineLayer>
+          <Popup openOn="hover" let:props><p>{props.style}</p></Popup>
+        </FillLayer>
       </GeoJSON>
     </MapLibre>
   </div>
