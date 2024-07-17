@@ -146,7 +146,7 @@
 
       <GeoJSON data={routeGj}>
         <LineLayer
-          paint={{ "line-color": "red", "line-width": 5 }}
+          paint={{ "line-color": "cyan", "line-width": 5 }}
           layout={{
             visibility: showLanes ? "none" : "visible",
           }}
@@ -175,9 +175,22 @@
           <Popup openOn="hover" let:props><p>{props.style}</p></Popup>
         </FillLayer>
         <LineLayer
-          filter={["!", ["has", "style"]]}
-          paint={{ "line-color": "cyan", "line-width": 3 }}
-        />
+          manageHoverState
+          filter={["has", "width"]}
+          paint={{
+            "line-color": [
+              "case",
+              [">=", ["get", "width"], lanesGj.width],
+              "green",
+              "red",
+            ],
+            "line-width": hoverStateFilter(3, 5),
+          }}
+        >
+          <Popup openOn="hover" let:props>
+            <p>{props.width.toFixed(2)}m</p>
+          </Popup>
+        </LineLayer>
       </GeoJSON>
     </MapLibre>
   </div>

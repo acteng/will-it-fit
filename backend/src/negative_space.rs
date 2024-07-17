@@ -36,16 +36,22 @@ pub async fn calculate(route_wgs84: &LineString, url: &str) -> Result<String> {
 
     info!("Calculating perpendiculars");
     for (pt, angle) in points_along_line(&mercator.to_mercator(route_wgs84), step_size_meters) {
+        let mut test_lines = Vec::new();
         for angle_offset in [-90.0, 90.0] {
             let projected = project_away(pt, angle + angle_offset, project_away_meters);
             let full_line = Line::new(pt, projected);
 
-            if let Some(line) = shortest_line_hitting_polygon(full_line, &polygons, &rtree) {
-                features.push(Feature::from(Geometry::from(&mercator.to_wgs84(&line))));
-            }
-            // If the test line doesn't hit anything within project_away_meters, then something's
-            // probably wrong -- skip it as output
+            test_lines.extend(shortest_line_hitting_polygon(full_line, &polygons, &rtree));
         }
+        // If either of the test lines doesn't hit anything within project_away_meters, then
+        // something's probably wrong -- skip it as output
+        if test_lines.len() != 2 {
+            continue;
+        }
+        let full_line = Line::new(test_lines[0].end, test_lines[1].end);
+        let mut f = Feature::from(Geometry::from(&mercator.to_wgs84(&full_line)));
+        f.set_property("width", full_line.euclidean_length());
+        features.push(f);
     }
 
     Ok(serde_json::to_string(&GeoJson::from(features))?)
