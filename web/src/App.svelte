@@ -63,7 +63,9 @@
 
   async function calculate() {
     try {
+      console.time("Calculate width");
       resultsGj = JSON.parse(await getNegativeSpace(JSON.stringify(routeGj)));
+      console.timeEnd("Calculate width");
     } catch (err) {
       window.alert(err);
     }
