@@ -1,6 +1,8 @@
 use anyhow::{bail, Result};
 use flatgeobuf::{FeatureProperties, FgbFeature, GeozeroGeometry, HttpFgbReader};
-use geo::{BoundingRect, Coord, Densify, Line, LineString, Polygon};
+use geo::{
+    BoundingRect, Coord, Densify, EuclideanLength, Line, LineIntersection, LineString, Polygon,
+};
 use geojson::{Feature, GeoJson, Geometry};
 use utils::Mercator;
 
@@ -26,9 +28,11 @@ pub async fn calculate(route_wgs84: &LineString, url: &str) -> Result<String> {
             let projected = project_away(pt, angle + angle_offset, project_away_meters);
             let full_line = Line::new(pt, projected);
 
-            features.push(Feature::from(Geometry::from(
-                &mercator.to_wgs84(&full_line),
-            )));
+            if let Some(line) = shortest_line_hitting_polygon(full_line, &polygons) {
+                features.push(Feature::from(Geometry::from(&mercator.to_wgs84(&line))));
+            }
+            // If the test line doesn't hit anything within project_away_meters, then something's
+            // probably wrong -- skip it as output
         }
     }
 
@@ -98,4 +102,30 @@ fn project_away(pt: Coord, angle_degrees: f64, distance: f64) -> Coord {
         x: pt.x + distance * cos,
         y: pt.y + distance * sin,
     }
+}
+
+// Assuming line.start is outside all of the polygons, looks for all possible intersections between
+// the line and a polygon, and trims the line back to the edge of the nearest polygon
+fn shortest_line_hitting_polygon(line: Line, polygons: &Vec<(Polygon, String)>) -> Option<Line> {
+    // TODO rtree it
+    let mut shortest: Option<(Line, f64)> = None;
+    // Ignore polygon holes
+    for (polygon, _) in polygons {
+        for polygon_line in polygon.exterior().lines() {
+            if let Some(LineIntersection::SinglePoint { intersection, .. }) =
+                geo::algorithm::line_intersection::line_intersection(line, polygon_line)
+            {
+                let candidate = Line::new(line.start, intersection);
+                let candidate_length = candidate.euclidean_length();
+                if shortest
+                    .as_ref()
+                    .map(|(_, len)| candidate_length < *len)
+                    .unwrap_or(true)
+                {
+                    shortest = Some((candidate, candidate_length));
+                }
+            }
+        }
+    }
+    shortest.map(|pair| pair.0)
 }
