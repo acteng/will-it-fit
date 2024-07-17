@@ -148,12 +148,16 @@
         <FillLayer
           manageHoverState
           paint={{
-            "fill-color": "grey",
+            "fill-color": "black",
             "fill-opacity": hoverStateFilter(0.5, 0.8),
           }}
         >
           <Popup openOn="hover" let:props><p>{props.style}</p></Popup>
         </FillLayer>
+        <LineLayer
+          filter={["!", ["has", "style"]]}
+          paint={{ "line-color": "cyan", "line-width": 3 }}
+        />
       </GeoJSON>
     </MapLibre>
   </div>
