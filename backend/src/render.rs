@@ -1,6 +1,6 @@
 use anyhow::{bail, Result};
 use geo::{BoundingRect, LineString};
-use geojson::{Feature, GeoJson, Geometry};
+use geojson::{Feature, FeatureCollection, Geometry};
 use utils::{buffer_linestring, Mercator, OffsetCurve};
 
 pub fn render_lanes(orig_wgs84: LineString, lanes: String) -> Result<String> {
@@ -33,5 +33,17 @@ pub fn render_lanes(orig_wgs84: LineString, lanes: String) -> Result<String> {
         width_sum += width;
     }
 
-    Ok(serde_json::to_string(&GeoJson::from(features))?)
+    let fc = FeatureCollection {
+        features,
+        bbox: None,
+        foreign_members: Some(
+            serde_json::json!({
+                "width": width_sum,
+            })
+            .as_object()
+            .unwrap()
+            .clone(),
+        ),
+    };
+    Ok(serde_json::to_string(&fc)?)
 }

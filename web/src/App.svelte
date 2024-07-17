@@ -29,7 +29,6 @@
 
   let map: Map;
 
-  let requiredWidth = 30;
   let lanes = "scbd|ds";
   let showLanes = true;
   let lanesOpacity = 80;
@@ -58,7 +57,11 @@
   $: lanesGj =
     routeGj.features.length > 0 && setupDone
       ? JSON.parse(renderLanes(JSON.stringify(routeGj), lanes))
-      : emptyGj;
+      : {
+          type: "FeatureCollection" as const,
+          features: [],
+          width: 0,
+        };
 
   async function calculate() {
     try {
@@ -86,14 +89,8 @@
     <hr />
     <hr />
 
-    <div>
-      <label>
-        Required width (m):
-        <input type="number" bind:value={requiredWidth} />
-      </label>
-    </div>
     <button on:click={calculate} disabled={routeGj.features.length == 0}>
-      Calculate
+      Check the width
     </button>
 
     <hr />
@@ -116,6 +113,7 @@
         <input type="text" bind:value={lanes} />
       </label>
     </div>
+    <p>Required width: {lanesGj.width}m</p>
     <div>
       <label>
         <input type="checkbox" bind:checked={showLanes} />

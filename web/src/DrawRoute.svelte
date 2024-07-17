@@ -93,6 +93,6 @@
     Edit this route
   </button>
 </div>
-{#if drawingRoute}
+{#if drawingRoute && $routeTool}
   <RouteSnapperControls route_tool={$routeTool} />
 {/if}
