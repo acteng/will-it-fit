@@ -88,6 +88,7 @@ dependencies = [
  "geojson",
  "geozero",
  "log",
+ "rstar",
  "serde",
  "serde_json",
  "utils",

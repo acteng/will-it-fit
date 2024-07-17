@@ -4,6 +4,7 @@ use geo::{
     BoundingRect, Coord, Densify, EuclideanLength, Line, LineIntersection, LineString, Polygon,
 };
 use geojson::{Feature, GeoJson, Geometry};
+use rstar::{primitives::GeomWithData, RTree, RTreeObject};
 use utils::Mercator;
 
 pub async fn calculate(route_wgs84: &LineString, url: &str) -> Result<String> {
@@ -23,12 +24,20 @@ pub async fn calculate(route_wgs84: &LineString, url: &str) -> Result<String> {
         features.push(f);
     }
 
+    let rtree = RTree::bulk_load(
+        polygons
+            .iter()
+            .enumerate()
+            .map(|(idx, (p, _))| GeomWithData::new(p.clone(), idx))
+            .collect(),
+    );
+
     for (pt, angle) in points_along_line(&mercator.to_mercator(route_wgs84), step_size_meters) {
         for angle_offset in [-90.0, 90.0] {
             let projected = project_away(pt, angle + angle_offset, project_away_meters);
             let full_line = Line::new(pt, projected);
 
-            if let Some(line) = shortest_line_hitting_polygon(full_line, &polygons) {
+            if let Some(line) = shortest_line_hitting_polygon(full_line, &polygons, &rtree) {
                 features.push(Feature::from(Geometry::from(&mercator.to_wgs84(&line))));
             }
             // If the test line doesn't hit anything within project_away_meters, then something's
@@ -106,12 +115,15 @@ fn project_away(pt: Coord, angle_degrees: f64, distance: f64) -> Coord {
 
 // Assuming line.start is outside all of the polygons, looks for all possible intersections between
 // the line and a polygon, and trims the line back to the edge of the nearest polygon
-fn shortest_line_hitting_polygon(line: Line, polygons: &Vec<(Polygon, String)>) -> Option<Line> {
-    // TODO rtree it
+fn shortest_line_hitting_polygon(
+    line: Line,
+    polygons: &Vec<(Polygon, String)>,
+    rtree: &RTree<GeomWithData<Polygon, usize>>,
+) -> Option<Line> {
     let mut shortest: Option<(Line, f64)> = None;
-    // Ignore polygon holes
-    for (polygon, _) in polygons {
-        for polygon_line in polygon.exterior().lines() {
+    for obj in rtree.locate_in_envelope_intersecting(&line.envelope()) {
+        // Ignore polygon holes
+        for polygon_line in polygons[obj.data].0.exterior().lines() {
             if let Some(LineIntersection::SinglePoint { intersection, .. }) =
                 geo::algorithm::line_intersection::line_intersection(line, polygon_line)
             {
