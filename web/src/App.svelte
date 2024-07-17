@@ -28,38 +28,37 @@
   });
 
   let map: Map;
+
   let requiredWidth = 30;
   let lanes = "scbd|ds";
+  let showLanes = true;
+  let lanesOpacity = 80;
+  let drawingRoute = false;
 
   let routeGj = loadRoute();
   let routeAuthority: Feature<Polygon, { name: string; level: string }> | null =
     null;
 
-  let resultsGj = {
+  let emptyGj = {
     type: "FeatureCollection" as const,
     features: [],
   };
-  let lanesOpacity = 80;
+
+  let resultsGj = emptyGj;
 
   function loadRoute(): FeatureCollection<LineString> {
     let x = window.localStorage.getItem("will-it-fit");
     if (x) {
       return JSON.parse(x);
     }
-    return {
-      type: "FeatureCollection" as const,
-      features: [],
-    };
+    return emptyGj;
   }
   $: window.localStorage.setItem("will-it-fit", JSON.stringify(routeGj));
 
   $: lanesGj =
     routeGj.features.length > 0 && setupDone
       ? JSON.parse(renderLanes(JSON.stringify(routeGj), lanes))
-      : {
-          type: "FeatureCollection" as const,
-          features: [],
-        };
+      : emptyGj;
 
   async function calculate() {
     try {
@@ -70,13 +69,18 @@
       window.alert(err);
     }
   }
+
+  $: if (drawingRoute) {
+    resultsGj = emptyGj;
+    lanesGj = emptyGj;
+  }
 </script>
 
 <Layout>
   <div slot="left">
     <h1>Will it fit?</h1>
 
-    <DrawRoute {map} bind:routeGj bind:routeAuthority />
+    <DrawRoute {map} bind:routeGj bind:routeAuthority bind:drawingRoute />
 
     <hr />
     <hr />
@@ -88,6 +92,14 @@
         <input type="number" bind:value={requiredWidth} />
       </label>
     </div>
+    <button on:click={calculate} disabled={routeGj.features.length == 0}>
+      Calculate
+    </button>
+
+    <hr />
+    <hr />
+    <hr />
+
     <div>
       <label>
         Street features from left-to-right (
@@ -104,9 +116,12 @@
         <input type="text" bind:value={lanes} />
       </label>
     </div>
-    <button on:click={calculate} disabled={routeGj.features.length == 0}>
-      Calculate
-    </button>
+    <div>
+      <label>
+        <input type="checkbox" bind:checked={showLanes} />
+        Show lanes
+      </label>
+    </div>
     <label>
       Lanes opacity: <input
         type="range"
@@ -132,7 +147,12 @@
       <RouteSnapperLayer />
 
       <GeoJSON data={routeGj}>
-        <LineLayer paint={{ "line-color": "red", "line-width": 5 }} />
+        <LineLayer
+          paint={{ "line-color": "red", "line-width": 5 }}
+          layout={{
+            visibility: showLanes ? "none" : "visible",
+          }}
+        />
       </GeoJSON>
       <GeoJSON data={lanesGj}>
         <FillLayer
@@ -141,7 +161,7 @@
             "fill-opacity": lanesOpacity / 100,
           }}
           layout={{
-            visibiliy: "none",
+            visibility: showLanes ? "visible" : "none",
           }}
         />
       </GeoJSON>

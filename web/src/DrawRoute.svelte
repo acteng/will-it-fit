@@ -26,7 +26,7 @@
   > | null;
 
   let routeTool: Writable<RouteTool | null> = writable(null);
-  let drawingRoute = false;
+  export let drawingRoute = false;
 
   async function getRouteSnapper() {
     routeAuthority = getBestMatch(map);

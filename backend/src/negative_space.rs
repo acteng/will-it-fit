@@ -4,6 +4,7 @@ use geo::{
     BoundingRect, Coord, Densify, EuclideanLength, Line, LineIntersection, LineString, Polygon,
 };
 use geojson::{Feature, GeoJson, Geometry};
+use log::info;
 use rstar::{primitives::GeomWithData, RTree, RTreeObject};
 use utils::Mercator;
 
@@ -15,7 +16,7 @@ pub async fn calculate(route_wgs84: &LineString, url: &str) -> Result<String> {
     let mercator = Mercator::from(route_wgs84.bounding_rect().unwrap()).unwrap();
 
     let mut features = Vec::new();
-
+    info!("Downloading nearby polygons");
     let polygons = read_nearby_polygons(route_wgs84, url, &mercator).await?;
     // Debug them as GJ
     for (p, style) in &polygons {
@@ -24,6 +25,7 @@ pub async fn calculate(route_wgs84: &LineString, url: &str) -> Result<String> {
         features.push(f);
     }
 
+    info!("Making rtree of {} polygons", polygons.len());
     let rtree = RTree::bulk_load(
         polygons
             .iter()
@@ -32,6 +34,7 @@ pub async fn calculate(route_wgs84: &LineString, url: &str) -> Result<String> {
             .collect(),
     );
 
+    info!("Calculating perpendiculars");
     for (pt, angle) in points_along_line(&mercator.to_mercator(route_wgs84), step_size_meters) {
         for angle_offset in [-90.0, 90.0] {
             let projected = project_away(pt, angle + angle_offset, project_away_meters);
