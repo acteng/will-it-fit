@@ -1,7 +1,8 @@
 use anyhow::{bail, Result};
 use flatgeobuf::{FeatureProperties, FgbFeature, GeozeroGeometry, HttpFgbReader};
 use geo::{
-    BoundingRect, Coord, Densify, EuclideanLength, Line, LineIntersection, LineString, Polygon,
+    BoundingRect, Coord, Densify, EuclideanLength, HaversineDestination, Line, LineIntersection,
+    LineString, Point, Polygon, Rect,
 };
 use geojson::{Feature, GeoJson, Geometry};
 use log::info;
@@ -13,11 +14,17 @@ pub async fn calculate(route_wgs84: &LineString, url: &str) -> Result<String> {
     let step_size_meters = 5.0;
     let project_away_meters = 50.0;
 
-    let mercator = Mercator::from(route_wgs84.bounding_rect().unwrap()).unwrap();
+    // Increase the bounding box around the route by the max amount that we'll look away.
+    let mut bbox = route_wgs84.bounding_rect().unwrap();
+    // TODO This works in the UK, but make sure this is correct everywhere
+    bbox.set_min(Point::from(bbox.min()).haversine_destination(135.0, project_away_meters));
+    bbox.set_max(Point::from(bbox.max()).haversine_destination(45.0, project_away_meters));
+
+    let mercator = Mercator::from(bbox).unwrap();
 
     let mut features = Vec::new();
     info!("Downloading nearby polygons");
-    let polygons = read_nearby_polygons(route_wgs84, url, &mercator).await?;
+    let polygons = read_nearby_polygons(bbox, url, &mercator).await?;
     // Debug them as GJ
     for (p, style) in &polygons {
         let mut f = Feature::from(Geometry::from(&mercator.to_wgs84(p)));
@@ -58,11 +65,10 @@ pub async fn calculate(route_wgs84: &LineString, url: &str) -> Result<String> {
 }
 
 async fn read_nearby_polygons(
-    route_wgs84: &LineString,
+    bbox: Rect,
     url: &str,
     mercator: &Mercator,
 ) -> Result<Vec<(Polygon, String)>> {
-    let bbox = route_wgs84.bounding_rect().unwrap();
     let mut fgb = HttpFgbReader::open(url)
         .await?
         .select_bbox(bbox.min().x, bbox.min().y, bbox.max().x, bbox.max().y)
