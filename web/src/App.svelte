@@ -54,14 +54,21 @@
   }
   $: window.localStorage.setItem("will-it-fit", JSON.stringify(routeGj));
 
-  $: lanesGj =
-    routeGj.features.length > 0 && setupDone
-      ? JSON.parse(renderLanes(JSON.stringify(routeGj), lanes))
-      : {
-          type: "FeatureCollection" as const,
-          features: [],
-          width: 0,
-        };
+  $: lanesGj = rerenderLanes(routeGj, setupDone, lanes);
+  function rerenderLanes(
+    routeGj: FeatureCollection<LineString>,
+    setupDone: boolean,
+    lanes: string,
+  ): FeatureCollection & { width: number } {
+    if (routeGj.features.length > 0 && setupDone) {
+      try {
+        return JSON.parse(renderLanes(JSON.stringify(routeGj), lanes));
+      } catch (err) {
+        window.alert(`Bad lanes config: ${err}`);
+      }
+    }
+    return { ...emptyGj, width: 0 };
+  }
 
   async function calculate() {
     try {
@@ -75,7 +82,7 @@
 
   $: if (drawingRoute) {
     resultsGj = emptyGj;
-    lanesGj = emptyGj;
+    lanesGj = { ...emptyGj, width: 0 };
   }
 </script>
 
@@ -91,6 +98,12 @@
 
     <button on:click={calculate} disabled={routeGj.features.length == 0}>
       Check the width
+    </button>
+    <button
+      on:click={() => (resultsGj = emptyGj)}
+      disabled={resultsGj.features.length == 0}
+    >
+      Clear
     </button>
 
     <hr />
