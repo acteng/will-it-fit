@@ -8,6 +8,7 @@ crate-type = ["cdylib", "rlib"]
 
 [dependencies]
 anyhow = "1.0.86"
+cavalier_contours = "0.4.0"
 console_error_panic_hook = "0.1.6"
 console_log = "1.0.0"
 flatgeobuf = "4.2.1"
