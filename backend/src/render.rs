@@ -7,16 +7,25 @@ pub fn render_lanes(orig_wgs84: LineString, lanes: String) -> Result<String> {
     let mercator = Mercator::from(orig_wgs84.bounding_rect().unwrap()).unwrap();
     let orig = mercator.to_mercator(&orig_wgs84);
 
-    // Use cavalier_contours to offset the original route linestring to draw lanes. First just
-    // offset it for each lane edge.
-    // TODO Make | be offset 0
-
-    let mut lane_edges = vec![orig.clone()];
-    let mut width_sum = 0.0;
+    // The original route linestring is not precisely in the physical middle of available road
+    // space, but it's usually pretty close. Center the lanes we draw on that.
+    // TODO Make | be offset 0?
+    let mut total_width = 0.0;
+    let mut offsets = vec![0.0];
     for code in lanes.chars() {
         let (_, width) = lane_config(code)?;
-        width_sum += width;
-        let Some(shifted) = offset_linestring(&orig, width_sum) else {
+        total_width += width;
+        offsets.push(total_width);
+    }
+    for x in &mut offsets {
+        *x -= total_width / 2.0;
+    }
+
+    // Use cavalier_contours to offset the original route linestring to draw lanes. First just
+    // offset it for each lane edge.
+    let mut lane_edges = Vec::new();
+    for offset in offsets {
+        let Some(shifted) = offset_linestring(&orig, offset) else {
             bail!("couldn't shift line");
         };
         lane_edges.push(shifted);
@@ -42,7 +51,7 @@ pub fn render_lanes(orig_wgs84: LineString, lanes: String) -> Result<String> {
         bbox: None,
         foreign_members: Some(
             serde_json::json!({
-                "width": width_sum,
+                "width": total_width,
             })
             .as_object()
             .unwrap()
