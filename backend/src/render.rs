@@ -7,30 +7,34 @@ pub fn render_lanes(orig_wgs84: LineString, lanes: String) -> Result<String> {
     let mercator = Mercator::from(orig_wgs84.bounding_rect().unwrap()).unwrap();
     let orig = mercator.to_mercator(&orig_wgs84);
 
-    let mut features = Vec::new();
-
+    // Use cavalier_contours to offset the original route linestring to draw lanes. First just
+    // offset it for each lane edge.
     // TODO Make | be offset 0
+
+    let mut lane_edges = vec![orig.clone()];
     let mut width_sum = 0.0;
     for code in lanes.chars() {
-        let (color, width) = match code {
-            's' => ("grey", 2.0),
-            'c' => ("green", 1.5),
-            'b' => ("red", 3.25),
-            'd' => ("black", 3.0),
-            '|' => ("yellow", 0.5),
-            _ => bail!("unknown lane code {code}"),
-        };
-        let Some(shifted) = offset_linestring(&orig, width_sum + width / 2.0) else {
+        let (_, width) = lane_config(code)?;
+        width_sum += width;
+        let Some(shifted) = offset_linestring(&orig, width_sum) else {
             bail!("couldn't shift line");
         };
-        let Some(thickened) = buffer_linestring(&shifted, width / 2.0, width / 2.0) else {
-            bail!("couldn't thicken lane");
-        };
-        let mut f = Feature::from(Geometry::from(&mercator.to_wgs84(&thickened)));
+        lane_edges.push(shifted);
+    }
+
+    let mut features = Vec::new();
+    // Pairs of these lane edges can make polygons. This is better than buffering a
+    // linestring centered in each lane, because corners ("bulges"?) match up better.
+    for (pair, code) in lane_edges.windows(2).zip(lanes.chars()) {
+        let (color, _) = lane_config(code)?;
+        // Glue both edges together to make a polygon
+        let mut pts = pair[0].0.clone();
+        pts.reverse();
+        pts.extend(pair[1].0.clone());
+        let polygon = Polygon::new(LineString(pts), Vec::new());
+        let mut f = Feature::from(Geometry::from(&mercator.to_wgs84(&polygon)));
         f.set_property("color", color);
         features.push(f);
-
-        width_sum += width;
     }
 
     let fc = FeatureCollection {
@@ -46,6 +50,17 @@ pub fn render_lanes(orig_wgs84: LineString, lanes: String) -> Result<String> {
         ),
     };
     Ok(serde_json::to_string(&fc)?)
+}
+
+fn lane_config(code: char) -> Result<(&'static str, f64)> {
+    Ok(match code {
+        's' => ("grey", 2.0),
+        'c' => ("green", 1.5),
+        'b' => ("red", 3.25),
+        'd' => ("black", 3.0),
+        '|' => ("yellow", 0.5),
+        _ => bail!("unknown lane code {code}"),
+    })
 }
 
 use cavalier_contours::polyline::{
@@ -88,20 +103,4 @@ fn pline_to_linestring(pline: &Polyline) -> LineString {
             .map(|v| Coord { x: v.x, y: v.y })
             .collect(),
     )
-}
-
-fn buffer_linestring(
-    linestring: &LineString,
-    left_meters: f64,
-    right_meters: f64,
-) -> Option<Polygon> {
-    assert!(left_meters >= 0.0);
-    assert!(right_meters >= 0.0);
-    let left = offset_linestring(linestring, -left_meters)?;
-    let right = offset_linestring(linestring, right_meters)?;
-    // Make a polygon by gluing these points together
-    let mut pts = left.0;
-    pts.reverse();
-    pts.extend(right.0);
-    Some(Polygon::new(LineString(pts), Vec::new()))
 }
