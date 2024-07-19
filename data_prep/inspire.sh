@@ -10,7 +10,7 @@ AREA=London_Borough_of_Southwark
 wget https://use-land-property-data.service.gov.uk/datasets/inspire/download/AREA.zip
 unzip $AREA.zip Land_Registry_Cadastral_Parcels.gml
 
-# Convert GML to GeoJSON, dropping all properties and converting the coordinate system.
+# Convert GML to GeoJSON, dropping all properties and fixing the coordinate system.
 # See
 # https://gis.stackexchange.com/questions/442709/how-can-i-debug-hanging-ogr2ogr
 # for the amusing story of ignoring an unreachable schema in the GML.
@@ -24,3 +24,6 @@ ogr2ogr out.fgb v2.geojson
 
 # Clean up intermediate files
 rm -f $AREA.zip Land_Registry_Cadastral_Parcels.gml Land_Registry_Cadastral_Parcels.gfs v1.geojson v2.geojson
+
+mkdir -p ../web/public
+mv out.fgb ../web/public

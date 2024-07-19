@@ -1,5 +1,4 @@
 *.swp
 target
 node_modules
-web/public/road_widths.fgb
-web/public/topo_areas.fgb
+web/public/out.fgb
