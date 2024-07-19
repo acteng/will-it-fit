@@ -27,7 +27,7 @@ pub async fn get_negative_space(input: String) -> Result<String, JsValue> {
     let linestrings: Vec<LineString> = input.into_iter().map(|x| x.geometry).collect();
     let input_route = linestrings[0].clone();
 
-    negative_space::calculate(&input_route, "http://localhost:5173/topo_areas.fgb")
+    negative_space::calculate(&input_route, "http://localhost:5173/out.fgb")
         .await
         .map_err(err_to_js)
 }

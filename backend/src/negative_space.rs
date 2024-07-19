@@ -1,5 +1,5 @@
 use anyhow::{bail, Result};
-use flatgeobuf::{FeatureProperties, FgbFeature, GeozeroGeometry, HttpFgbReader};
+use flatgeobuf::{FgbFeature, GeozeroGeometry, HttpFgbReader};
 use geo::{
     BoundingRect, Coord, Densify, EuclideanLength, HaversineDestination, Line, LineIntersection,
     LineString, Point, Polygon, Rect,
@@ -26,10 +26,8 @@ pub async fn calculate(route_wgs84: &LineString, url: &str) -> Result<String> {
     info!("Downloading nearby polygons");
     let polygons = read_nearby_polygons(bbox, url, &mercator).await?;
     // Debug them as GJ
-    for (p, style) in &polygons {
-        let mut f = Feature::from(Geometry::from(&mercator.to_wgs84(p)));
-        f.set_property("style", style.clone());
-        features.push(f);
+    for p in &polygons {
+        features.push(Feature::from(Geometry::from(&mercator.to_wgs84(p))));
     }
 
     info!("Making rtree of {} polygons", polygons.len());
@@ -37,7 +35,7 @@ pub async fn calculate(route_wgs84: &LineString, url: &str) -> Result<String> {
         polygons
             .iter()
             .enumerate()
-            .map(|(idx, (p, _))| GeomWithData::new(p.clone(), idx))
+            .map(|(idx, p)| GeomWithData::new(p.clone(), idx))
             .collect(),
     );
 
@@ -64,11 +62,7 @@ pub async fn calculate(route_wgs84: &LineString, url: &str) -> Result<String> {
     Ok(serde_json::to_string(&GeoJson::from(features))?)
 }
 
-async fn read_nearby_polygons(
-    bbox: Rect,
-    url: &str,
-    mercator: &Mercator,
-) -> Result<Vec<(Polygon, String)>> {
+async fn read_nearby_polygons(bbox: Rect, url: &str, mercator: &Mercator) -> Result<Vec<Polygon>> {
     let mut fgb = HttpFgbReader::open(url)
         .await?
         .select_bbox(bbox.min().x, bbox.min().y, bbox.max().x, bbox.max().y)
@@ -76,11 +70,7 @@ async fn read_nearby_polygons(
 
     let mut polygons = Vec::new();
     while let Some(feature) = fgb.next().await? {
-        let style = feature.property::<String>("style_description").unwrap();
-        if keep_polygon(&style) {
-            let geometry = mercator.to_mercator(&get_polygon(feature)?);
-            polygons.push((geometry, style));
-        }
+        polygons.push(mercator.to_mercator(&get_polygon(feature)?));
     }
     Ok(polygons)
 }
@@ -93,14 +83,6 @@ fn get_polygon(f: &FgbFeature) -> Result<Polygon> {
         geo::Geometry::Polygon(p) => Ok(p),
         _ => bail!("Wrong type in fgb"),
     }
-}
-
-// TODO Do this filtering to the input
-fn keep_polygon(style: &str) -> bool {
-    !matches!(
-        style,
-        "Road Or Track Fill" | "Roadside Manmade Fill" | "Path Fill" | "Traffic Calming Fill"
-    )
 }
 
 // Every step_size along a LineString, returns the point and angle
@@ -132,13 +114,13 @@ fn project_away(pt: Coord, angle_degrees: f64, distance: f64) -> Coord {
 // the line and a polygon, and trims the line back to the edge of the nearest polygon
 fn shortest_line_hitting_polygon(
     line: Line,
-    polygons: &Vec<(Polygon, String)>,
+    polygons: &Vec<Polygon>,
     rtree: &RTree<GeomWithData<Polygon, usize>>,
 ) -> Option<Line> {
     let mut shortest: Option<(Line, f64)> = None;
     for obj in rtree.locate_in_envelope_intersecting(&line.envelope()) {
         // Ignore polygon holes
-        for polygon_line in polygons[obj.data].0.exterior().lines() {
+        for polygon_line in polygons[obj.data].exterior().lines() {
             if let Some(LineIntersection::SinglePoint { intersection, .. }) =
                 geo::algorithm::line_intersection::line_intersection(line, polygon_line)
             {

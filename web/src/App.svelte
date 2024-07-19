@@ -184,9 +184,7 @@
             "fill-color": "black",
             "fill-opacity": hoverStateFilter(0.5, 0.8),
           }}
-        >
-          <Popup openOn="hover" let:props><p>{props.style}</p></Popup>
-        </FillLayer>
+  />
         <LineLayer
           manageHoverState
           filter={["has", "width"]}
