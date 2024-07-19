@@ -3,6 +3,14 @@
   import { undoLength } from "./stores";
 
   export let route_tool: RouteTool;
+
+  let extendRoute = true;
+
+  // TODO When editing, we should save in the route and use the previous value
+  $: route_tool.setRouteConfig({
+    avoid_doubling_back: false,
+    extend_route: extendRoute,
+  });
 </script>
 
 <button
@@ -45,3 +53,8 @@
     to cancel
   </li>
 </ul>
+
+<label>
+  <input type="checkbox" bind:checked={extendRoute} />
+  Add points to end
+</label>

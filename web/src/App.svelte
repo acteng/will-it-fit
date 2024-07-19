@@ -184,7 +184,7 @@
             "fill-color": "black",
             "fill-opacity": hoverStateFilter(0.5, 0.8),
           }}
-  />
+        />
         <LineLayer
           manageHoverState
           filter={["has", "width"]}
