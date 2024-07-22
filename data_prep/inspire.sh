@@ -7,7 +7,7 @@ set -x
 # TODO Run for everywhere and merge files
 AREA=London_Borough_of_Southwark
 
-wget https://use-land-property-data.service.gov.uk/datasets/inspire/download/AREA.zip
+wget https://use-land-property-data.service.gov.uk/datasets/inspire/download/$AREA.zip
 unzip $AREA.zip Land_Registry_Cadastral_Parcels.gml
 
 # Convert GML to GeoJSON, dropping all properties and fixing the coordinate system.
