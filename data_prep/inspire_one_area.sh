@@ -1,11 +1,13 @@
 #!/bin/bash
 # You'll need ogr2ogr (https://gdal.org/programs/ogr2ogr.html) and mapshaper (https://github.com/mbloch/mapshaper/?tab=readme-ov-file#installation)
+# This script will write ../inspire/$AREA.geojson
 
 set -e
 set -x
 
-# TODO Run for everywhere and merge files
-AREA=London_Borough_of_Southwark
+AREA=$1
+mkdir -p $AREA
+cd $AREA
 
 wget https://use-land-property-data.service.gov.uk/datasets/inspire/download/$AREA.zip
 unzip $AREA.zip Land_Registry_Cadastral_Parcels.gml
@@ -19,11 +21,8 @@ ogr2ogr v1.geojson -oo DOWNLOAD_SCHEMA=NO -t_srs EPSG:4326 Land_Registry_Cadastr
 # Merge adjacent polygons into one for performance. Explode the resulting multipolygon into many polygons
 mapshaper v1.geojson -dissolve -explode -o v2.geojson format=geojson geojson-type=FeatureCollection
 
-# Convert to flatgeobuf
-ogr2ogr out.fgb v2.geojson
-
 # Clean up intermediate files
-rm -f $AREA.zip Land_Registry_Cadastral_Parcels.gml Land_Registry_Cadastral_Parcels.gfs v1.geojson v2.geojson
-
-mkdir -p ../web/public
-mv out.fgb ../web/public
+mkdir -p ../inspire
+mv v2.geojson ../inspire/$AREA.geojson
+cd ..
+rm -rf $AREA
