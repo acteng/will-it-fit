@@ -11,8 +11,9 @@ use geozero::GeozeroDatasource;
 fn main() -> Result<()> {
     let mut fgb = FgbWriter::create("obstacles", GeometryType::Polygon)?;
 
-    for path in std::env::args().skip(1) {
-        println!("Reading {path}");
+    let paths: Vec<_> = std::env::args().skip(1).collect();
+    for (idx, path) in paths.iter().enumerate() {
+        println!("Reading {path} ({} / {})", idx + 1, paths.len());
         let mut file = BufReader::new(File::open(path)?);
         let mut reader = GeoJsonReader(&mut file);
         reader.process(&mut fgb)?;

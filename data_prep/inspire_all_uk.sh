@@ -11,6 +11,6 @@ done
 
 # Wait for pueue to finish. inspire/ will contain individual geojson files. Then:
 #
-# cd merge_files; cargo run --release ../inspire
+# cd merge_files; cargo run --release ../inspire/*
 #
 # to produce one final fgb
