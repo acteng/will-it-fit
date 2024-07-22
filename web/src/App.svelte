@@ -9,7 +9,7 @@
     hoverStateFilter,
     type Map,
   } from "svelte-maplibre";
-  import { Popup } from "svelte-utils/map";
+  import { bbox, Popup } from "svelte-utils/map";
   import { onMount } from "svelte";
   import type {
     FeatureCollection,
@@ -80,6 +80,14 @@
     }
   }
 
+  function zoomToFit() {
+    map.fitBounds(bbox(routeGj), {
+      padding: 20,
+      animate: true,
+      duration: 200,
+    });
+  }
+
   $: if (drawingRoute) {
     resultsGj = emptyGj;
     lanesGj = { ...emptyGj, width: 0 };
@@ -96,6 +104,9 @@
     <hr />
     <hr />
 
+    <button on:click={zoomToFit} disabled={routeGj.features.length == 0}>
+      Zoom to show route
+    </button>
     <button on:click={calculate} disabled={routeGj.features.length == 0}>
       Check the width
     </button>
