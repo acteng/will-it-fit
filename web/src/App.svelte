@@ -10,6 +10,7 @@
     type Map,
   } from "svelte-maplibre";
   import { bbox, Popup } from "svelte-utils/map";
+  import { Modal } from "svelte-utils";
   import { onMount } from "svelte";
   import type {
     FeatureCollection,
@@ -28,6 +29,7 @@
   });
 
   let map: Map;
+  let showAbout = false;
 
   let lanes = "scbd|ds";
   let showLanes = true;
@@ -97,6 +99,7 @@
 <Layout>
   <div slot="left">
     <h1>Will it fit?</h1>
+    <button on:click={() => (showAbout = true)}>About / Credits</button>
 
     <DrawRoute {map} bind:routeGj bind:routeAuthority bind:drawingRoute />
 
@@ -217,3 +220,56 @@
     </MapLibre>
   </div>
 </Layout>
+
+{#if showAbout}
+  <Modal on:close={() => (showAbout = false)}>
+    <h1>About the Will-it-fit tool</h1>
+
+    <p>
+      This is an <b>experimental</b>
+      tool by
+      <a href="https://github.com/dabreegster/" target="_blank">
+        Dustin Carlino
+      </a>
+      to determine if a route with some required width will fit in between non-road
+      spaces. It's an early prototype and shouldn't be used for anything yet. There
+      are many caveats about the way it works and limits with the data sources that
+      are not documented yet.
+    </p>
+
+    <p>
+      Depending on the version of this tool you're using, you'll be seeing data
+      from differnet sources. All versions use route center-lines from <a
+        href="https://www.openstreetmap.org/about"
+        target="_blank"
+      >
+        OpenStreetMap
+      </a>
+      .
+    </p>
+    <h2>
+      <a
+        href="https://use-land-property-data.service.gov.uk/datasets/inspire#conditions"
+        target="_blank"
+      >
+        INSPIRE
+      </a>
+    </h2>
+    <p>
+      This information is subject to Crown copyright and database rights 2024
+      and is reproduced with the permission of HM Land Registry. The polygons
+      (including the associated geometry, namely x, y co-ordinates) are subject
+      to Crown copyright and database rights 2024 Ordnance Survey 100026316.
+    </p>
+
+    <h2>
+      <a
+        href="https://www.ordnancesurvey.co.uk/products/os-mastermap-topography-layer"
+        target="_blank"
+      >
+        Ordnance Survey MasterMap Topography Layer
+      </a>
+    </h2>
+    <p>OS data is copyright to Ordnance Survey</p>
+  </Modal>
+{/if}
