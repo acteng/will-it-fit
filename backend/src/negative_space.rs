@@ -40,13 +40,21 @@ pub async fn calculate(route_wgs84: &LineString, url: &str) -> Result<String> {
     );
 
     info!("Calculating perpendiculars");
+    let mut num_perps = 0;
+    let mut num_hit_checks = 0;
     for (pt, angle) in points_along_line(&mercator.to_mercator(route_wgs84), step_size_meters) {
+        num_perps += 1;
         let mut test_lines = Vec::new();
         for angle_offset in [-90.0, 90.0] {
             let projected = project_away(pt, angle + angle_offset, project_away_meters);
             let full_line = Line::new(pt, projected);
 
-            test_lines.extend(shortest_line_hitting_polygon(full_line, &polygons, &rtree));
+            test_lines.extend(shortest_line_hitting_polygon(
+                full_line,
+                &polygons,
+                &rtree,
+                &mut num_hit_checks,
+            ));
         }
         // If either of the test lines doesn't hit anything within project_away_meters, then
         // something's probably wrong -- skip it as output
@@ -58,6 +66,10 @@ pub async fn calculate(route_wgs84: &LineString, url: &str) -> Result<String> {
         f.set_property("width", full_line.euclidean_length());
         features.push(f);
     }
+    info!(
+        "Tried {} perpendiculars, with a total of {} line hit checks",
+        num_perps, num_hit_checks
+    );
 
     Ok(serde_json::to_string(&GeoJson::from(features))?)
 }
@@ -116,11 +128,13 @@ fn shortest_line_hitting_polygon(
     line: Line,
     polygons: &Vec<Polygon>,
     rtree: &RTree<GeomWithData<Polygon, usize>>,
+    num_hit_checks: &mut usize,
 ) -> Option<Line> {
     let mut shortest: Option<(Line, f64)> = None;
     for obj in rtree.locate_in_envelope_intersecting(&line.envelope()) {
         // Ignore polygon holes
         for polygon_line in polygons[obj.data].exterior().lines() {
+            *num_hit_checks += 1;
             if let Some(LineIntersection::SinglePoint { intersection, .. }) =
                 geo::algorithm::line_intersection::line_intersection(line, polygon_line)
             {
