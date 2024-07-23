@@ -1,0 +1,12 @@
+[package]
+name = "fix_osmm"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+anyhow = "1.0.86"
+flate2 = "1.0.30"
+flatgeobuf = { version = "4.2.1", default-features = false }
+geozero = { version = "0.13.0", default-features = false, features = ["with-geojson", "with-mvt"] }
+mbtiles = { version = "0.11.1", default-features = false }
+tokio = { version = "1.38.0", features = ["macros", "rt-multi-thread"] }
