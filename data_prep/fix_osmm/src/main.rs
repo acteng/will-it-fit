@@ -6,6 +6,7 @@ use std::io::{BufWriter, Cursor, Read};
 use anyhow::Result;
 use flatgeobuf::{FgbWriter, GeometryType};
 use geozero::{mvt::Message, GeozeroDatasource};
+use indicatif::{ProgressBar, ProgressStyle};
 use mbtiles::Mbtiles;
 
 /// This script takes the `OSMasterMapTopography_gb_TopographicArea.mbtiles` file as input and
@@ -29,10 +30,17 @@ async fn main() -> Result<()> {
     println!("Reading x = {x1} to {x2}, y = {y1} to {y2}");
 
     let mut fgb = Some(FgbWriter::create("obstacles", GeometryType::MultiPolygon)?);
+    let progress = ProgressBar::new(((x2 - x1 + 1) * (y2 - y1 + 1)).into()).with_style(ProgressStyle::with_template(
+        "[{elapsed_precise}] [{wide_bar:.cyan/blue}] {human_pos}/{human_len} ({per_sec}, {eta})").unwrap());
 
-    let mut n = 0;
     'OUTER: for tile_x in x1..=x2 {
         for tile_y in y1..=y2 {
+            progress.inc(1);
+            // TODO Still tmp debugging
+            if progress.position() == 2_000_000 {
+                break 'OUTER;
+            }
+
             match mbtiles.get_tile(&mut conn, zoom, tile_x, tile_y).await {
                 Ok(Some(bytes)) => {
                     let extent = 4096.0;
@@ -48,11 +56,6 @@ async fn main() -> Result<()> {
                         layer.process(&mut out)?;
                     }
                     fgb = Some(out.inner);
-
-                    n += 1;
-                    if n == 1000 {
-                        break 'OUTER;
-                    }
                 }
                 Ok(None) => {}
                 Err(err) => {
@@ -61,6 +64,7 @@ async fn main() -> Result<()> {
             }
         }
     }
+    progress.finish();
 
     println!("Writing");
     let mut file = BufWriter::new(File::create("out.fgb")?);
