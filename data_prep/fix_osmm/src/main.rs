@@ -1,5 +1,6 @@
 mod wrap;
 
+use std::f64::consts::PI;
 use std::fs::File;
 use std::io::{BufWriter, Cursor, Read};
 
@@ -37,7 +38,7 @@ async fn main() -> Result<()> {
         for tile_y in y1..=y2 {
             progress.inc(1);
             // TODO Still tmp debugging
-            if progress.position() == 2_000_000 {
+            if false && progress.position() == 2_000_000 {
                 break 'OUTER;
             }
 
@@ -83,8 +84,8 @@ fn lon_lat_to_tile(lon: f64, lat: f64, zoom: u32) -> (u32, u32) {
     let x = lon_radians;
     let y = lat_radians.tan().asinh();
 
-    let x = (1.0 + (x / std::f64::consts::PI)) / 2.0;
-    let y = (1.0 - (y / std::f64::consts::PI)) / 2.0;
+    let x = (1.0 + (x / PI)) / 2.0;
+    let y = (1.0 - (y / PI)) / 2.0;
 
     let num_tiles = 2u32.pow(zoom) as f64;
 
@@ -94,7 +95,8 @@ fn lon_lat_to_tile(lon: f64, lat: f64, zoom: u32) -> (u32, u32) {
     )
 }
 
-// Via https://gis.stackexchange.com/questions/401541/decoding-mapbox-vector-tiles
+// Via
+// https://github.com/Amyantis/python-vt2geojson/blob/0ab4f10fcf5dc51ce3aa605506dd46f3601292ae/vt2geojson/features.py#L35
 // TODO I think mercantile or tile-grid can replace both of these
 fn pixel_to_lon_lat(
     pixel_x: f64,
@@ -104,13 +106,12 @@ fn pixel_to_lon_lat(
     zoom: u8,
     extent: f64,
 ) -> (f64, f64) {
-    let n = 2u32.pow(zoom.into()) as f64;
-    let x_tile = (tile_x as f64) + (pixel_x / extent);
-    let y_tile = (tile_y as f64) + ((extent - pixel_y) / extent);
-    let lon = (x_tile / n) * 360.0 - 180.0;
-    let lat = (std::f64::consts::PI * (1.0 - 2.0 * y_tile / n))
-        .sinh()
-        .atan()
-        .to_degrees();
+    let size = extent * 2.0_f64.powi(zoom.into());
+    let x0 = extent * (tile_x as f64);
+    let y0 = extent * (tile_y as f64);
+
+    let y2 = 180.0 - (pixel_y + y0) * 360.0 / size;
+    let lon = (pixel_x + x0) * 360.0 / size - 180.0;
+    let lat = 360.0 / PI * (y2 * PI / 180.0).exp().atan() - 90.0;
     (lon, lat)
 }
