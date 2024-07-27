@@ -24,7 +24,11 @@ fn main() -> Result<()> {
         "[{elapsed_precise}] [{wide_bar:.cyan/blue}] {human_pos}/{human_len} ({per_sec}, {eta})").unwrap());
     for set in sets {
         progress.inc(1);
-        output.extend(union_all(&polygons, set, max_unsigned_geodesic_area));
+        output.extend(union_all(
+            &polygons,
+            set.into_iter().collect(),
+            max_unsigned_geodesic_area,
+        ));
     }
     progress.finish();
     println!("Result has {}", output.len());
@@ -96,19 +100,29 @@ fn find_all_adjacencies(polygons: &Vec<Polygon>) -> Vec<HashSet<usize>> {
 // If the area isn't constrained, this should usually return exactly one polygon
 fn union_all(
     polygons: &Vec<Polygon>,
-    indices: HashSet<usize>,
+    mut indices: Vec<usize>,
     max_unsigned_geodesic_area: f64,
 ) -> Vec<Polygon> {
     let mut out = Vec::new();
 
-    let indices: Vec<usize> = indices.into_iter().collect();
-    let mut current = MultiPolygon::new(vec![polygons[indices[0]].clone()]);
-    for idx in indices.into_iter().skip(1) {
+    let mut current = MultiPolygon::new(vec![polygons[indices.pop().unwrap()].clone()]);
+    while !indices.is_empty() {
+        // If the current polygon is too big, start a new one
         if current.chamberlain_duquette_unsigned_area() > max_unsigned_geodesic_area {
             out.extend(current.0);
-            current = MultiPolygon::new(vec![polygons[idx].clone()]);
-        } else {
+            current = MultiPolygon::new(vec![polygons[indices.pop().unwrap()].clone()]);
+        } else if let Some(idx_of_idx) = indices
+            .iter()
+            .position(|idx| current.relate(&polygons[*idx]).is_touches())
+        {
+            // Union the current polygon with something else
+            // (Maybe a Vec of indices is a weird data structure)
+            let idx = indices.remove(idx_of_idx);
             current = current.union(&MultiPolygon::new(vec![polygons[idx].clone()]));
+        } else {
+            // The current polygon doesn't touch anything, so start a new group
+            out.extend(current.0);
+            current = MultiPolygon::new(vec![polygons[indices.pop().unwrap()].clone()]);
         }
     }
     out.extend(current.0);
