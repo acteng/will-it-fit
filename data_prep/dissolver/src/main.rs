@@ -1,29 +1,24 @@
+use std::collections::HashSet;
+
 use anyhow::Result;
-use geo::{BooleanOps, Polygon, Relate};
+use geo::{BooleanOps, MultiPolygon, Polygon, Relate};
+use union_find_rs::prelude::{DisjointSets, UnionFind};
 
 // TODO Would this work faster with planar coords?
 
 fn main() -> Result<()> {
     let args: Vec<_> = std::env::args().collect();
-    let mut polygons = read_polygons(&args[1])?;
+    let polygons = read_polygons(&args[1])?;
+    let sets = find_all_adjacencies(&polygons);
 
-    loop {
-        println!("Have {} polygons", polygons.len());
-        if let Some((idx1, idx2)) = find_first_touch(&polygons) {
-            // Remove in the proper order
-            let second = polygons.remove(idx2);
-            let first = polygons.remove(idx1);
-            polygons.extend(first.union(&second));
-        } else {
-            break;
-        }
-
-        if false && polygons.len() == 5600 {
-            break;
-        }
+    println!("Unioning {} sets", sets.len());
+    let mut output = Vec::new();
+    for set in sets {
+        output.extend(union_all(&polygons, set));
     }
+    println!("Result has {}", output.len());
 
-    write_polygons("out.geojson", polygons)?;
+    write_polygons("out.geojson", output)?;
 
     Ok(())
 }
@@ -47,15 +42,34 @@ fn write_polygons(path: &str, polygons: Vec<Polygon>) -> Result<()> {
     Ok(())
 }
 
-// Returns (idx1, idx2) such that idx1 < idx2
-fn find_first_touch(polygons: &Vec<Polygon>) -> Option<(usize, usize)> {
+// Returns disjoint sets of indices into polygons, where each set has polygons touching each other
+fn find_all_adjacencies(polygons: &Vec<Polygon>) -> Vec<HashSet<usize>> {
+    let mut sets = DisjointSets::new();
+    for i in 0..polygons.len() {
+        sets.make_set(i).unwrap();
+    }
+
+    // TODO rstar could help
+    println!("Finding all adjacencies for {} polygons", polygons.len());
     for idx1 in 0..polygons.len() {
         for idx2 in (idx1 + 1)..polygons.len() {
             let de9im = polygons[idx1].relate(&polygons[idx2]);
             if de9im.is_touches() {
-                return Some((idx1, idx2));
+                sets.union(&idx1, &idx2).unwrap();
             }
         }
     }
-    None
+    sets.into_iter().collect()
+}
+
+// This should usually return exactly one polygon
+fn union_all(polygons: &Vec<Polygon>, indices: HashSet<usize>) -> Vec<Polygon> {
+    println!("group with {:?}", indices);
+    let indices: Vec<usize> = indices.into_iter().collect();
+    let mut result = MultiPolygon::new(vec![polygons[indices[0]].clone()]);
+    for idx in indices.into_iter().skip(1) {
+        result = result.union(&MultiPolygon::new(vec![polygons[idx].clone()]));
+    }
+    println!("  yielded {}", result.0.len());
+    result.0
 }

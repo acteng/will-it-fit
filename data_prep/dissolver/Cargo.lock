@@ -61,6 +61,7 @@ dependencies = [
  "geo",
  "geojson",
  "serde_json",
+ "union-find-rs",
 ]
 
 [[package]]
@@ -340,6 +341,12 @@ name = "unicode-ident"
 version = "1.0.12"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3354b9ac3fae1ff6755cb6db53683adb661634f67557942dea4facebec0fee4b"
+
+[[package]]
+name = "union-find-rs"
+version = "0.2.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "8d7cf5ae6c8635588ab0aa0ddd0ba68b7586c96cd00f8d12337071219f9c885f"
 
 [[package]]
 name = "version_check"
