@@ -2,12 +2,18 @@ use std::collections::HashSet;
 
 use anyhow::Result;
 use geo::{BooleanOps, ChamberlainDuquetteArea, MultiPolygon, Polygon, Relate};
-use indicatif::{ProgressBar, ProgressStyle};
+use indicatif::{ParallelProgressIterator, ProgressBar, ProgressStyle};
+use rayon::prelude::*;
 use rstar::{primitives::GeomWithData, RTree, RTreeObject};
 use union_find_rs::prelude::{DisjointSets, UnionFind};
 
+static PROGRESS_STYLE: &str =
+    "[{elapsed_precise}] [{wide_bar:.cyan/blue}] {human_pos}/{human_len} ({per_sec}, {eta})";
+
 // TODO Would this work faster with planar coords?
 
+/// This takes a .geojson file with polygons as input, then dissolves/merges adjacent polygons,
+/// limited to a max_unsigned_geodesic_area. The input and output are WGS84.
 fn main() -> Result<()> {
     let args: Vec<_> = std::env::args().collect();
     let polygons = read_polygons(&args[1])?;
@@ -19,20 +25,19 @@ fn main() -> Result<()> {
     let max_unsigned_geodesic_area = 15_000.0;
 
     println!("Unioning {} sets", sets.len());
-    let mut output = Vec::new();
-    let progress = ProgressBar::new(sets.len() as u64).with_style(ProgressStyle::with_template(
-        "[{elapsed_precise}] [{wide_bar:.cyan/blue}] {human_pos}/{human_len} ({per_sec}, {eta})").unwrap());
-    for set in sets {
-        progress.inc(1);
-        output.extend(union_all(
-            &polygons,
-            set.into_iter().collect(),
-            max_unsigned_geodesic_area,
-        ));
-    }
-    progress.finish();
-    println!("Result has {}", output.len());
+    let output: Vec<Polygon> = sets
+        .into_par_iter()
+        .progress_with_style(ProgressStyle::with_template(PROGRESS_STYLE).unwrap())
+        .flat_map(|set| {
+            union_all(
+                &polygons,
+                set.into_iter().collect(),
+                max_unsigned_geodesic_area,
+            )
+        })
+        .collect();
 
+    println!("Result has {}", output.len());
     write_polygons("out.geojson", output)?;
 
     Ok(())
@@ -59,6 +64,7 @@ fn write_polygons(path: &str, polygons: Vec<Polygon>) -> Result<()> {
 }
 
 // Returns disjoint sets of indices into polygons, where each set has polygons touching each other
+// TODO Could parallelize this too, since DisjointSets could be combined
 fn find_all_adjacencies(polygons: &Vec<Polygon>) -> Vec<HashSet<usize>> {
     println!("Making rtree");
     // TODO Is the clone avoidable?
@@ -70,15 +76,14 @@ fn find_all_adjacencies(polygons: &Vec<Polygon>) -> Vec<HashSet<usize>> {
             .collect(),
     );
 
-    let progress = ProgressBar::new(polygons.len() as u64).with_style(ProgressStyle::with_template(
-        "[{elapsed_precise}] [{wide_bar:.cyan/blue}] {human_pos}/{human_len} ({per_sec}, {eta})").unwrap());
-
     let mut sets = DisjointSets::new();
     for i in 0..polygons.len() {
         sets.make_set(i).unwrap();
     }
 
     println!("Finding all adjacencies for {} polygons", polygons.len());
+    let progress = ProgressBar::new(polygons.len() as u64)
+        .with_style(ProgressStyle::with_template(PROGRESS_STYLE).unwrap());
     for idx1 in 0..polygons.len() {
         progress.inc(1);
         for obj in rtree.locate_in_envelope_intersecting(&polygons[idx1].envelope()) {
