@@ -3,6 +3,7 @@ use std::collections::HashSet;
 use anyhow::Result;
 use geo::{BooleanOps, MultiPolygon, Polygon, Relate};
 use indicatif::{ProgressBar, ProgressStyle};
+use rstar::{primitives::GeomWithData, RTree, RTreeObject};
 use union_find_rs::prelude::{DisjointSets, UnionFind};
 
 // TODO Would this work faster with planar coords?
@@ -50,7 +51,16 @@ fn write_polygons(path: &str, polygons: Vec<Polygon>) -> Result<()> {
 
 // Returns disjoint sets of indices into polygons, where each set has polygons touching each other
 fn find_all_adjacencies(polygons: &Vec<Polygon>) -> Vec<HashSet<usize>> {
-    println!("Finding all adjacencies for {} polygons", polygons.len());
+    println!("Making rtree");
+    // TODO Is the clone avoidable?
+    let rtree = RTree::bulk_load(
+        polygons
+            .iter()
+            .enumerate()
+            .map(|(idx, p)| GeomWithData::new(p.clone(), idx))
+            .collect(),
+    );
+
     let progress = ProgressBar::new(polygons.len() as u64).with_style(ProgressStyle::with_template(
         "[{elapsed_precise}] [{wide_bar:.cyan/blue}] {human_pos}/{human_len} ({per_sec}, {eta})").unwrap());
 
@@ -59,10 +69,15 @@ fn find_all_adjacencies(polygons: &Vec<Polygon>) -> Vec<HashSet<usize>> {
         sets.make_set(i).unwrap();
     }
 
-    // TODO rstar could help
+    println!("Finding all adjacencies for {} polygons", polygons.len());
     for idx1 in 0..polygons.len() {
         progress.inc(1);
-        for idx2 in (idx1 + 1)..polygons.len() {
+        for obj in rtree.locate_in_envelope_intersecting(&polygons[idx1].envelope()) {
+            // TODO Can we use the geometry directly from GeomWithData?
+            let idx2 = obj.data;
+            if idx1 >= idx2 {
+                continue;
+            }
             let de9im = polygons[idx1].relate(&polygons[idx2]);
             if de9im.is_touches() {
                 sets.union(&idx1, &idx2).unwrap();

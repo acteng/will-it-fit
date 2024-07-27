@@ -74,6 +74,7 @@ dependencies = [
  "geo",
  "geojson",
  "indicatif",
+ "rstar",
  "serde_json",
  "union-find-rs",
 ]
