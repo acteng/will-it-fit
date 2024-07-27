@@ -1,0 +1,10 @@
+[package]
+name = "dissolver"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+anyhow = "1.0.86"
+geo = "0.28.0"
+geojson = "0.24.1"
+serde_json = "1.0.120"

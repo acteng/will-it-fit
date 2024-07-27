@@ -7,7 +7,7 @@ set -x
 
 # You need to manually download OSMM topo data for some region as a gpkg and unzip.
 # TODO Work with the UK-wide extract
-INPUT=~/Downloads/ordnance_survey_downloads/Data/OSMasterMapTopography_6471149_topographic_area.gpkg
+INPUT=~/Downloads/ordnance_survey_downloads_old/Data/OSMasterMapTopography_6471149_topographic_area.gpkg
 
 # Extract relevant polygons from the gpkg, drop all properties, and fix the coordinate system
 ogr2ogr v1.geojson -t_srs EPSG:4326 $INPUT -sql 'SELECT geometry FROM topographic_area WHERE style_description NOT IN ("Road Or Track Fill", "Roadside Manmade Fill", "Path Fill", "Traffic Calming Fill")'
