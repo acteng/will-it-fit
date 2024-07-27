@@ -65,6 +65,8 @@ fn write_polygons(path: &str, polygons: Vec<Polygon>) -> Result<()> {
 
 // Returns disjoint sets of indices into polygons, where each set has polygons touching each other
 // TODO Could parallelize this too, since DisjointSets could be combined
+// TODO We could limit area at this stage too, if we could keep a sum per disjoint set as we go,
+// and refuse to join.
 fn find_all_adjacencies(polygons: &Vec<Polygon>) -> Vec<HashSet<usize>> {
     println!("Making rtree");
     // TODO Is the clone avoidable?
@@ -108,6 +110,15 @@ fn union_all(
     mut indices: Vec<usize>,
     max_unsigned_geodesic_area: f64,
 ) -> Vec<Polygon> {
+    // TODO Temporarily, give up when the input is too big
+    if indices.len() > 1000 {
+        println!("Skipping huge set with {}", indices.len());
+        return indices
+            .into_iter()
+            .map(|idx| polygons[idx].clone())
+            .collect();
+    }
+
     let mut out = Vec::new();
 
     let mut current = MultiPolygon::new(vec![polygons[indices.pop().unwrap()].clone()]);
@@ -116,6 +127,7 @@ fn union_all(
         if current.chamberlain_duquette_unsigned_area() > max_unsigned_geodesic_area {
             out.extend(current.0);
             current = MultiPolygon::new(vec![polygons[indices.pop().unwrap()].clone()]);
+            // TODO Could we reuse the rtree here to prune the search for the huge sets?
         } else if let Some(idx_of_idx) = indices
             .iter()
             .position(|idx| current.relate(&polygons[*idx]).is_touches())
