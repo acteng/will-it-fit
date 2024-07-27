@@ -1,7 +1,7 @@
 use std::collections::HashSet;
 
 use anyhow::Result;
-use geo::{BooleanOps, MultiPolygon, Polygon, Relate};
+use geo::{BooleanOps, ChamberlainDuquetteArea, MultiPolygon, Polygon, Relate};
 use indicatif::{ProgressBar, ProgressStyle};
 use rstar::{primitives::GeomWithData, RTree, RTreeObject};
 use union_find_rs::prelude::{DisjointSets, UnionFind};
@@ -13,13 +13,18 @@ fn main() -> Result<()> {
     let polygons = read_polygons(&args[1])?;
     let sets = find_all_adjacencies(&polygons);
 
+    // TODO Take as param
+    // TODO is the ChamberlainDuquetteArea approximation faster than the other trait? Are we
+    // confident the polygons have the correct winding order?
+    let max_unsigned_geodesic_area = 15_000.0;
+
     println!("Unioning {} sets", sets.len());
     let mut output = Vec::new();
     let progress = ProgressBar::new(sets.len() as u64).with_style(ProgressStyle::with_template(
         "[{elapsed_precise}] [{wide_bar:.cyan/blue}] {human_pos}/{human_len} ({per_sec}, {eta})").unwrap());
     for set in sets {
         progress.inc(1);
-        output.extend(union_all(&polygons, set));
+        output.extend(union_all(&polygons, set, max_unsigned_geodesic_area));
     }
     progress.finish();
     println!("Result has {}", output.len());
@@ -88,14 +93,25 @@ fn find_all_adjacencies(polygons: &Vec<Polygon>) -> Vec<HashSet<usize>> {
     sets.into_iter().collect()
 }
 
-// This should usually return exactly one polygon
-fn union_all(polygons: &Vec<Polygon>, indices: HashSet<usize>) -> Vec<Polygon> {
-    //println!("group with {:?}", indices);
+// If the area isn't constrained, this should usually return exactly one polygon
+fn union_all(
+    polygons: &Vec<Polygon>,
+    indices: HashSet<usize>,
+    max_unsigned_geodesic_area: f64,
+) -> Vec<Polygon> {
+    let mut out = Vec::new();
+
     let indices: Vec<usize> = indices.into_iter().collect();
-    let mut result = MultiPolygon::new(vec![polygons[indices[0]].clone()]);
+    let mut current = MultiPolygon::new(vec![polygons[indices[0]].clone()]);
     for idx in indices.into_iter().skip(1) {
-        result = result.union(&MultiPolygon::new(vec![polygons[idx].clone()]));
+        if current.chamberlain_duquette_unsigned_area() > max_unsigned_geodesic_area {
+            out.extend(current.0);
+            current = MultiPolygon::new(vec![polygons[idx].clone()]);
+        } else {
+            current = current.union(&MultiPolygon::new(vec![polygons[idx].clone()]));
+        }
     }
-    //println!("  yielded {}", result.0.len());
-    result.0
+    out.extend(current.0);
+
+    out
 }
