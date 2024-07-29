@@ -164,12 +164,18 @@ fn union_all(
 }
 
 fn cascading_union(polygons: Vec<Polygon>) -> Vec<Polygon> {
-    println!("Making rtree for {} polygons", polygons.len());
+    let len = polygons.len();
+    println!("Making rtree for {len} polygons");
     let rtree = RTree::bulk_load(polygons);
+
+    println!("Cascading union");
+    let progress = ProgressBar::new(len as u64)
+        .with_style(ProgressStyle::with_template(PROGRESS_STYLE).unwrap());
 
     // From https://gist.github.com/urschrei/cd80b4d2ec3c75f12fa541a5bdbf6489
     let init = || MultiPolygon::<f64>::new(vec![]);
     let fold = |accum: MultiPolygon<f64>, poly: &Polygon<f64>| -> MultiPolygon<f64> {
+        progress.inc(1);
         // NB the argument to union here is wrong / costly, because it won't accept &Polygon
         // Perhaps our current union method (which accepts &Self) is too strict?
         union(&accum, &MultiPolygon::new(vec![poly.clone()]))
@@ -178,15 +184,20 @@ fn cascading_union(polygons: Vec<Polygon>) -> Vec<Polygon> {
         union(&accum1, &accum2)
     };
 
-    println!("Cascading union");
-    bottom_up_fold_reduce(&rtree, init, fold, reduce).0
+    let result = bottom_up_fold_reduce(&rtree, init, fold, reduce).0;
+    progress.finish();
+    result
 }
 
 fn union(mp1: &MultiPolygon, mp2: &MultiPolygon) -> MultiPolygon {
     // Fast, works on WGS84 or planar, crashy
     if true {
+        println!("union of {} + {}", mp1.0.len(), mp2.0.len());
         match std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| mp1.union(mp2))) {
-            Ok(result) => result,
+            Ok(result) => {
+                println!("  done with that union, got {} in result", result.0.len());
+                result
+            }
             Err(err) => {
                 println!("Crash {err:?}");
                 // Give up on unioning here
