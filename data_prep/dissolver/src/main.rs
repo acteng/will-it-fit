@@ -1,7 +1,7 @@
 use std::collections::HashSet;
 
 use anyhow::Result;
-use geo::{BooleanOps, ChamberlainDuquetteArea, MultiPolygon, Polygon, Relate};
+use geo::{BooleanOps, ChamberlainDuquetteArea, MultiPolygon, Polygon, Relate, SpadeBoolops};
 use indicatif::{ParallelProgressIterator, ProgressBar, ProgressStyle};
 use rayon::prelude::*;
 use rstar::{primitives::GeomWithData, ParentNode, RTree, RTreeNode, RTreeObject};
@@ -13,7 +13,7 @@ static PROGRESS_STYLE: &str =
 // TODO Would this work faster with planar coords?
 
 /// This takes a .geojson file with polygons as input, then dissolves/merges adjacent polygons,
-/// limited to a max_unsigned_geodesic_area. The input and output are WGS84.
+/// limited to a max_unsigned_geodesic_area. The input and output are TODO CRS.
 fn main() -> Result<()> {
     let args: Vec<_> = std::env::args().collect();
     let polygons = read_polygons(&args[1])?;
@@ -64,7 +64,17 @@ fn read_polygons(path: &str) -> Result<Vec<Polygon>> {
 
 fn write_polygons(path: &str, polygons: Vec<Polygon>) -> Result<()> {
     let gc = geo::GeometryCollection::from(polygons);
-    let fc = geojson::FeatureCollection::from(&gc);
+    let mut fc = geojson::FeatureCollection::from(&gc);
+    if false {
+        fc.foreign_members = Some(
+            serde_json::json!({
+                "crs": { "type": "name", "properties": { "name": "urn:ogc:def:crs:EPSG::27700" } }
+            })
+            .as_object()
+            .unwrap()
+            .clone(),
+        );
+    }
     std::fs::write(path, serde_json::to_string(&fc)?)?;
     Ok(())
 }
@@ -162,17 +172,37 @@ fn cascading_union(polygons: Vec<Polygon>) -> Vec<Polygon> {
     let fold = |accum: MultiPolygon<f64>, poly: &Polygon<f64>| -> MultiPolygon<f64> {
         // NB the argument to union here is wrong / costly, because it won't accept &Polygon
         // Perhaps our current union method (which accepts &Self) is too strict?
-        accum.union(&MultiPolygon::new(vec![poly.clone()]))
+        union(&accum, &MultiPolygon::new(vec![poly.clone()]))
     };
     let reduce = |accum1: MultiPolygon<f64>, accum2: MultiPolygon<f64>| -> MultiPolygon<f64> {
-        accum1.union(&accum2)
+        union(&accum1, &accum2)
     };
 
     println!("Cascading union");
     bottom_up_fold_reduce(&rtree, init, fold, reduce).0
 }
 
+fn union(mp1: &MultiPolygon, mp2: &MultiPolygon) -> MultiPolygon {
+    // Fast, works on WGS84 or planar, crashy
+    if true {
+        match std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| mp1.union(mp2))) {
+            Ok(result) => result,
+            Err(err) => {
+                println!("Crash {err:?}");
+                // Give up on unioning here
+                let mut polygons = mp1.0.clone();
+                polygons.extend(mp2.0.clone());
+                MultiPolygon::new(polygons)
+            }
+        }
+    } else {
+        // Slow, works on planar, not crashy
+        SpadeBoolops::union(mp1, mp2).unwrap()
+    }
+}
+
 // From https://gist.github.com/urschrei/cd80b4d2ec3c75f12fa541a5bdbf6489
+// TODO Try the rayon one
 fn bottom_up_fold_reduce<T, S, I, F, R>(
     tree: &RTree<T>,
     mut init: I,
