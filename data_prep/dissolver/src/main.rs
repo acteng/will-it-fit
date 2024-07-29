@@ -4,7 +4,7 @@ use anyhow::Result;
 use geo::{BooleanOps, ChamberlainDuquetteArea, MultiPolygon, Polygon, Relate};
 use indicatif::{ParallelProgressIterator, ProgressBar, ProgressStyle};
 use rayon::prelude::*;
-use rstar::{primitives::GeomWithData, RTree, RTreeObject};
+use rstar::{primitives::GeomWithData, ParentNode, RTree, RTreeNode, RTreeObject};
 use union_find_rs::prelude::{DisjointSets, UnionFind};
 
 static PROGRESS_STYLE: &str =
@@ -17,6 +17,12 @@ static PROGRESS_STYLE: &str =
 fn main() -> Result<()> {
     let args: Vec<_> = std::env::args().collect();
     let polygons = read_polygons(&args[1])?;
+
+    if true {
+        let output = cascading_union(polygons);
+        return write_polygons("out.geojson", output);
+    }
+
     let sets = find_all_adjacencies(&polygons);
 
     // TODO Take as param
@@ -145,4 +151,59 @@ fn union_all(
     out.extend(current.0);
 
     out
+}
+
+fn cascading_union(polygons: Vec<Polygon>) -> Vec<Polygon> {
+    println!("Making rtree for {} polygons", polygons.len());
+    let rtree = RTree::bulk_load(polygons);
+
+    // From https://gist.github.com/urschrei/cd80b4d2ec3c75f12fa541a5bdbf6489
+    let init = || MultiPolygon::<f64>::new(vec![]);
+    let fold = |accum: MultiPolygon<f64>, poly: &Polygon<f64>| -> MultiPolygon<f64> {
+        // NB the argument to union here is wrong / costly, because it won't accept &Polygon
+        // Perhaps our current union method (which accepts &Self) is too strict?
+        accum.union(&MultiPolygon::new(vec![poly.clone()]))
+    };
+    let reduce = |accum1: MultiPolygon<f64>, accum2: MultiPolygon<f64>| -> MultiPolygon<f64> {
+        accum1.union(&accum2)
+    };
+
+    println!("Cascading union");
+    bottom_up_fold_reduce(&rtree, init, fold, reduce).0
+}
+
+// From https://gist.github.com/urschrei/cd80b4d2ec3c75f12fa541a5bdbf6489
+fn bottom_up_fold_reduce<T, S, I, F, R>(
+    tree: &RTree<T>,
+    mut init: I,
+    mut fold: F,
+    mut reduce: R,
+) -> S
+where
+    T: RTreeObject,
+    I: FnMut() -> S,
+    F: FnMut(S, &T) -> S,
+    R: FnMut(S, S) -> S,
+{
+    fn inner<T, S, I, F, R>(parent: &ParentNode<T>, init: &mut I, fold: &mut F, reduce: &mut R) -> S
+    where
+        T: RTreeObject,
+        I: FnMut() -> S,
+        F: FnMut(S, &T) -> S,
+        R: FnMut(S, S) -> S,
+    {
+        parent
+            .children()
+            .iter()
+            .fold(init(), |accum, child| match child {
+                RTreeNode::Leaf(value) => fold(accum, value),
+                RTreeNode::Parent(parent) => {
+                    let value = inner(&parent, init, fold, reduce);
+
+                    reduce(accum, value)
+                }
+            })
+    }
+
+    inner(tree.root(), &mut init, &mut fold, &mut reduce)
 }
