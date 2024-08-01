@@ -1,20 +1,18 @@
 <script lang="ts">
   import { loadAuthorities, getBestMatch } from "./match_area";
-  import { writable, type Writable } from "svelte/store";
   import type {
     FeatureCollection,
     LineString,
     Feature,
     Polygon,
   } from "geojson";
-  import { routeToolGj, snapMode, undoLength } from "./sketch/stores";
-  import { init, RouteTool } from "route-snapper-ts";
+  import { RouteTool } from "route-snapper-ts";
   import RouteSnapperControls from "./sketch/RouteSnapperControls.svelte";
+  import RouteSnapperLoader from "./sketch/RouteSnapperLoader.svelte";
   import { onMount } from "svelte";
   import { type Map } from "svelte-maplibre";
 
   onMount(async () => {
-    await init();
     await loadAuthorities();
   });
 
@@ -24,26 +22,15 @@
     Polygon,
     { name: string; level: string }
   > | null;
-
-  let routeTool: Writable<RouteTool | null> = writable(null);
   export let drawingRoute = false;
 
-  async function getRouteSnapper() {
+  let routeTool: RouteTool | null = null;
+  let url = "";
+
+  function getRouteSnapper() {
     routeAuthority = getBestMatch(map);
     let authority = `${routeAuthority.properties.level}_${routeAuthority.properties.name}`;
-    let url = `https://atip.uk/route-snappers/v3/${authority}.bin.gz`;
-    let resp = await fetch(url);
-    let bytes = await resp.arrayBuffer();
-
-    routeTool.set(
-      new RouteTool(
-        map,
-        new Uint8Array(bytes),
-        routeToolGj,
-        snapMode,
-        undoLength,
-      ),
-    );
+    url = `https://atip.uk/route-snappers/v3/${authority}.bin.gz`;
   }
 
   function startDrawing(edit: boolean) {
@@ -52,23 +39,29 @@
     //resultsGj.features = [];
     drawingRoute = true;
 
-    $routeTool!.addEventListenerSuccess((feature) => {
+    routeTool!.addEventListenerSuccess((feature) => {
       routeGj.features = [feature as Feature<LineString>];
       drawingRoute = false;
-      $routeTool!.clearEventListeners();
+      routeTool!.clearEventListeners();
     });
-    $routeTool!.addEventListenerFailure(() => {
+    routeTool!.addEventListenerFailure(() => {
       drawingRoute = false;
-      $routeTool!.clearEventListeners();
+      routeTool!.clearEventListeners();
     });
 
     if (edit) {
-      $routeTool!.editExistingRoute(copy.features[0]);
+      routeTool!.editExistingRoute(copy.features[0]);
     } else {
-      $routeTool!.startRoute();
+      routeTool!.startRoute();
     }
   }
 </script>
+
+{#key url}
+  {#if url}
+    <RouteSnapperLoader {map} {url} bind:routeTool />
+  {/if}
+{/key}
 
 <div>
   <button on:click={getRouteSnapper}>
@@ -80,19 +73,17 @@
 <div>
   <button
     on:click={() => startDrawing(false)}
-    disabled={drawingRoute || $routeTool == null}
+    disabled={drawingRoute || routeTool == null}
   >
     Draw a route
   </button>
   <button
     on:click={() => startDrawing(true)}
-    disabled={drawingRoute ||
-      $routeTool == null ||
-      routeGj.features.length == 0}
+    disabled={drawingRoute || routeTool == null || routeGj.features.length == 0}
   >
     Edit this route
   </button>
 </div>
-{#if drawingRoute && $routeTool}
-  <RouteSnapperControls route_tool={$routeTool} />
+{#if drawingRoute && routeTool}
+  <RouteSnapperControls route_tool={routeTool} />
 {/if}
