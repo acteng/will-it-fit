@@ -19,14 +19,23 @@
     Polygon,
   } from "geojson";
   import RouteSnapperLayer from "./sketch/RouteSnapperLayer.svelte";
-  import init, { renderLanes, getNegativeSpace } from "backend";
+  import workerWrapper from "./worker?worker";
+  import { type Backend } from "./worker";
+  import * as Comlink from "comlink";
   import DrawRoute from "./DrawRoute.svelte";
   import mask from "@turf/mask";
 
-  let setupDone = false;
+  let backend: Comlink.Remote<Backend> | null = null;
+
   onMount(async () => {
-    await init();
-    setupDone = true;
+    interface WorkerConstructor {
+      new (): Backend;
+    }
+
+    let MyWorker: Comlink.Remote<WorkerConstructor> = Comlink.wrap(
+      new workerWrapper(),
+    );
+    backend = await new MyWorker();
   });
 
   let map: Map;
@@ -46,7 +55,7 @@
     features: [],
   };
 
-  let resultsGj = emptyGj;
+  let resultsGj: FeatureCollection<Polygon> = emptyGj;
 
   function loadRoute(): FeatureCollection<LineString> {
     let x = window.localStorage.getItem("will-it-fit");
@@ -57,26 +66,29 @@
   }
   $: window.localStorage.setItem("will-it-fit", JSON.stringify(routeGj));
 
-  $: lanesGj = rerenderLanes(routeGj, setupDone, lanes);
-  function rerenderLanes(
+  let lanesGj: FeatureCollection & { width: number } = { ...emptyGj, width: 0 };
+
+  $: rerenderLanes(routeGj, backend, lanes);
+  async function rerenderLanes(
     routeGj: FeatureCollection<LineString>,
-    setupDone: boolean,
+    backend: Comlink.Remote<Backend> | null,
     lanes: string,
-  ): FeatureCollection & { width: number } {
-    if (routeGj.features.length > 0 && setupDone) {
+  ) {
+    if (routeGj.features.length > 0 && backend) {
       try {
-        return JSON.parse(renderLanes(JSON.stringify(routeGj), lanes));
+        lanesGj = await backend.renderLanes(routeGj, lanes);
+        return;
       } catch (err) {
         window.alert(`Bad lanes config: ${err}`);
       }
     }
-    return { ...emptyGj, width: 0 };
+    lanesGj = { ...emptyGj, width: 0 };
   }
 
   async function calculate() {
     try {
       console.time("Calculate width");
-      resultsGj = JSON.parse(await getNegativeSpace(JSON.stringify(routeGj)));
+      resultsGj = await backend!.getNegativeSpace(routeGj);
       console.timeEnd("Calculate width");
     } catch (err) {
       window.alert(err);
@@ -111,7 +123,10 @@
     <button on:click={zoomToFit} disabled={routeGj.features.length == 0}>
       Zoom to show route
     </button>
-    <button on:click={calculate} disabled={routeGj.features.length == 0}>
+    <button
+      on:click={calculate}
+      disabled={backend == null || routeGj.features.length == 0}
+    >
       Check the width
     </button>
     <button
