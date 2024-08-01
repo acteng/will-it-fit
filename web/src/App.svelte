@@ -21,6 +21,7 @@
   import RouteSnapperLayer from "./sketch/RouteSnapperLayer.svelte";
   import init, { renderLanes, getNegativeSpace } from "backend";
   import DrawRoute from "./DrawRoute.svelte";
+  import mask from "@turf/mask";
 
   let setupDone = false;
   onMount(async () => {
@@ -164,8 +165,8 @@
       bind:map
     >
       {#if routeAuthority}
-        <GeoJSON data={routeAuthority}>
-          <LineLayer paint={{ "line-color": "black", "line-width": 5 }} />
+        <GeoJSON data={mask(routeAuthority)}>
+          <FillLayer paint={{ "fill-color": "black", "fill-opacity": 0.5 }} />
         </GeoJSON>
       {/if}
 
