@@ -14,13 +14,16 @@ export class Backend {
 
   async getNegativeSpace(
     routeGj: FeatureCollection<LineString>,
+    progressCb: (msg: string) => void,
   ): Promise<FeatureCollection<Polygon>> {
     if (!this.setup) {
       await init();
       this.setup = true;
     }
 
-    return JSON.parse(await getNegativeSpaceInternal(JSON.stringify(routeGj)));
+    return JSON.parse(
+      await getNegativeSpaceInternal(JSON.stringify(routeGj), progressCb),
+    );
   }
 
   async renderLanes(

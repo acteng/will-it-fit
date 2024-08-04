@@ -24,6 +24,7 @@
   import * as Comlink from "comlink";
   import DrawRoute from "./DrawRoute.svelte";
   import mask from "@turf/mask";
+  import Loading from "./Loading.svelte";
 
   let backend: Comlink.Remote<Backend> | null = null;
 
@@ -49,6 +50,8 @@
   let routeGj = loadRoute();
   let routeAuthority: Feature<Polygon, { name: string; level: string }> | null =
     null;
+
+  let loading: string[] = [];
 
   let emptyGj = {
     type: "FeatureCollection" as const,
@@ -88,11 +91,21 @@
   async function calculate() {
     try {
       console.time("Calculate width");
-      resultsGj = await backend!.getNegativeSpace(routeGj);
+      loading = ["Calculating width"];
+      resultsGj = await backend!.getNegativeSpace(
+        routeGj,
+        Comlink.proxy(progressCb),
+      );
       console.timeEnd("Calculate width");
     } catch (err) {
       window.alert(err);
+    } finally {
+      loading = [];
     }
+  }
+
+  function progressCb(msg: string) {
+    loading = [...loading, msg];
   }
 
   function zoomToFit() {
@@ -289,3 +302,5 @@
     <p>OS data is copyright to Ordnance Survey</p>
   </Modal>
 {/if}
+
+<Loading {loading} />

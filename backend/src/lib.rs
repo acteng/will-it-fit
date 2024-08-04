@@ -7,15 +7,21 @@ use geojson::de::deserialize_geometry;
 use serde::Deserialize;
 use wasm_bindgen::prelude::*;
 
+use crate::timer::Timer;
+
 mod negative_space;
 mod render;
+mod timer;
 
 static START: Once = Once::new();
 
 /// Takes GeoJSON with one LineString, and returns a FeatureCollection of all negative space
 /// polygons in the polygon.
 #[wasm_bindgen(js_name = getNegativeSpace)]
-pub async fn get_negative_space(input: String) -> Result<String, JsValue> {
+pub async fn get_negative_space(
+    input: String,
+    progress_cb: Option<js_sys::Function>,
+) -> Result<String, JsValue> {
     // Panics shouldn't happen, but if they do, console.log them.
     console_error_panic_hook::set_once();
     START.call_once(|| {
@@ -27,9 +33,13 @@ pub async fn get_negative_space(input: String) -> Result<String, JsValue> {
     let linestrings: Vec<LineString> = input.into_iter().map(|x| x.geometry).collect();
     let input_route = linestrings[0].clone();
 
-    negative_space::calculate(&input_route, "http://localhost:5173/out.fgb")
-        .await
-        .map_err(err_to_js)
+    negative_space::calculate(
+        &input_route,
+        "http://localhost:5173/out.fgb",
+        Timer::new("calculate negative space", progress_cb),
+    )
+    .await
+    .map_err(err_to_js)
 }
 
 /// Takes GeoJSON with one LineString and a string representing lane config, and returns a FeatureCollection

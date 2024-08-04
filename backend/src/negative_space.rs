@@ -9,7 +9,9 @@ use log::info;
 use rstar::{primitives::GeomWithData, RTree, RTreeObject};
 use utils::Mercator;
 
-pub async fn calculate(route_wgs84: &LineString, url: &str) -> Result<String> {
+use crate::timer::Timer;
+
+pub async fn calculate(route_wgs84: &LineString, url: &str, mut timer: Timer) -> Result<String> {
     // TODO Take some params?
     let step_size_meters = 5.0;
     let project_away_meters = 50.0;
@@ -23,14 +25,14 @@ pub async fn calculate(route_wgs84: &LineString, url: &str) -> Result<String> {
     let mercator = Mercator::from(bbox).unwrap();
 
     let mut features = Vec::new();
-    info!("Downloading nearby polygons");
+    timer.step("Downloading nearby polygons");
     let polygons = read_nearby_polygons(bbox, url, &mercator).await?;
     // Debug them as GJ
     for p in &polygons {
         features.push(Feature::from(Geometry::from(&mercator.to_wgs84(p))));
     }
 
-    info!("Making rtree of {} polygons", polygons.len());
+    timer.step(format!("Making rtree of {} polygons", polygons.len()));
     let rtree = RTree::bulk_load(
         polygons
             .iter()
@@ -39,11 +41,23 @@ pub async fn calculate(route_wgs84: &LineString, url: &str) -> Result<String> {
             .collect(),
     );
 
-    info!("Calculating perpendiculars");
+    let test_points = points_along_line(&mercator.to_mercator(route_wgs84), step_size_meters);
+    let num_test_points = test_points.len();
+    timer.push(format!(
+        "Calculating perpendiculars at {num_test_points} points"
+    ));
     let mut num_perps = 0;
     let mut num_hit_checks = 0;
-    for (pt, angle) in points_along_line(&mercator.to_mercator(route_wgs84), step_size_meters) {
+    for (pt, angle) in test_points {
         num_perps += 1;
+        // TODO Proper Timer API for this
+        if num_perps % 200 == 0 {
+            timer.step(format!(
+                "{}% perpendiculars done",
+                ((num_perps as f64 / num_test_points as f64) * 100.0).round()
+            ));
+        }
+
         let mut test_lines = Vec::new();
         for angle_offset in [-90.0, 90.0] {
             let projected = project_away(pt, angle + angle_offset, project_away_meters);
@@ -66,10 +80,12 @@ pub async fn calculate(route_wgs84: &LineString, url: &str) -> Result<String> {
         f.set_property("width", full_line.euclidean_length());
         features.push(f);
     }
+    timer.pop();
     info!(
         "Tried {} perpendiculars, with a total of {} line hit checks",
         num_perps, num_hit_checks
     );
+    timer.done();
 
     Ok(serde_json::to_string(&GeoJson::from(features))?)
 }
