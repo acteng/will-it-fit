@@ -1582,13 +1582,10 @@ dependencies = [
 name = "widths"
 version = "0.1.0"
 dependencies = [
- "anyhow",
  "geo",
- "geojson",
  "js-sys",
  "log",
  "rstar",
- "serde_json",
  "utils",
  "wasm-bindgen",
  "web-time",

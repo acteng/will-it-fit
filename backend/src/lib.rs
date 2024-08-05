@@ -2,17 +2,34 @@ use std::sync::Once;
 
 use anyhow::{bail, Result};
 use flatgeobuf::{FgbFeature, GeozeroGeometry, HttpFgbReader};
-use geo::{LineString, Polygon, Rect};
-use geojson::de::deserialize_geometry;
+use geo::{Line, LineString, Polygon, Rect};
+use geojson::{de::deserialize_geometry, Feature, GeoJson, Geometry};
 
 use serde::Deserialize;
 use wasm_bindgen::prelude::*;
 
+use utils::Mercator;
 use widths::Timer;
 
 mod render;
 
 static START: Once = Once::new();
+
+struct Features {
+    features: Vec<Feature>,
+}
+
+impl widths::Output for Features {
+    fn nearby_polygon(&mut self, mercator: &Mercator, polygon: &Polygon) {
+        self.features
+            .push(Feature::from(Geometry::from(&mercator.to_wgs84(polygon))));
+    }
+    fn perp_line(&mut self, mercator: &Mercator, line: Line, width: f64) {
+        let mut f = Feature::from(Geometry::from(&mercator.to_wgs84(&line)));
+        f.set_property("width", width);
+        self.features.push(f);
+    }
+}
 
 /// Takes GeoJSON with one LineString, and returns a FeatureCollection of all negative space
 /// polygons in the polygon.
@@ -41,14 +58,19 @@ pub async fn get_negative_space(
     let url = "http://localhost:5173/out.fgb";
     let polygons = read_nearby_polygons(bbox, url).await.map_err(err_to_js)?;
 
+    let mut out = Features {
+        features: Vec::new(),
+    };
     widths::calculate(
         &input_route,
         polygons,
         timer,
         step_size_meters,
         project_away_meters,
-    )
-    .map_err(err_to_js)
+        &mut out,
+    );
+
+    serde_json::to_string(&GeoJson::from(out.features)).map_err(err_to_js)
 }
 
 /// Takes GeoJSON with one LineString and a string representing lane config, and returns a FeatureCollection

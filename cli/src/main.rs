@@ -3,8 +3,9 @@ use std::io::BufReader;
 
 use anyhow::{bail, Result};
 use flatgeobuf::{FallibleStreamingIterator, FgbFeature, FgbReader, GeozeroGeometry};
-use geo::{Polygon, Rect};
-use utils::Tags;
+use geo::{Line, Polygon, Rect};
+use geojson::{Feature, GeoJson, Geometry};
+use utils::{Mercator, Tags};
 
 use widths::Timer;
 
@@ -22,8 +23,12 @@ fn main() -> Result<()> {
         &mut utils::osm2graph::NullReader,
     )?;
 
-    for edge in &graph.edges {
-        println!("Working on {}", edge.osm_way);
+    let mut out = Features {
+        features: Vec::new(),
+    };
+
+    for (idx, edge) in graph.edges.iter().enumerate() {
+        println!("Working on edge {}/{}", idx, graph.edges.len());
 
         let edge_wgs84 = graph.mercator.to_wgs84(&edge.linestring);
         let mut timer = Timer::new("calculate negative space", None);
@@ -34,19 +39,20 @@ fn main() -> Result<()> {
         timer.step("Downloading nearby polygons");
         let polygons = read_nearby_polygons(bbox, "../web/public/out.fgb")?;
 
-        std::fs::write(
-            format!("{}.geojson", edge.osm_way.0),
-            widths::calculate(
-                &edge_wgs84,
-                polygons,
-                timer,
-                step_size_meters,
-                project_away_meters,
-            )?,
-        )?;
+        widths::calculate(
+            &edge_wgs84,
+            polygons,
+            timer,
+            step_size_meters,
+            project_away_meters,
+            &mut out,
+        );
     }
 
-    Ok(())
+    Ok(std::fs::write(
+        "out.geojson",
+        serde_json::to_string(&GeoJson::from(out.features))?,
+    )?)
 }
 
 fn keep_edge(tags: &Tags) -> bool {
@@ -78,5 +84,21 @@ fn get_polygon(f: &FgbFeature) -> Result<Polygon> {
     match p.take_geometry().unwrap() {
         geo::Geometry::Polygon(p) => Ok(p),
         _ => bail!("Wrong type in fgb"),
+    }
+}
+
+struct Features {
+    features: Vec<Feature>,
+}
+
+impl widths::Output for Features {
+    fn nearby_polygon(&mut self, mercator: &Mercator, polygon: &Polygon) {
+        self.features
+            .push(Feature::from(Geometry::from(&mercator.to_wgs84(polygon))));
+    }
+    fn perp_line(&mut self, mercator: &Mercator, line: Line, width: f64) {
+        let mut f = Feature::from(Geometry::from(&mercator.to_wgs84(&line)));
+        f.set_property("width", width);
+        self.features.push(f);
     }
 }

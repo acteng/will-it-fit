@@ -1,9 +1,7 @@
-use anyhow::Result;
 use geo::{
     BoundingRect, Coord, Densify, EuclideanLength, HaversineDestination, Line, LineIntersection,
     LineString, Point, Polygon, Rect,
 };
-use geojson::{Feature, GeoJson, Geometry};
 use log::info;
 use rstar::{primitives::GeomWithData, RTree, RTreeObject};
 use utils::Mercator;
@@ -27,24 +25,26 @@ pub fn bbox(route_wgs84: &LineString, project_away_meters: f64) -> Rect {
     LineString::new(vec![min, max]).bounding_rect().unwrap()
 }
 
+pub trait Output {
+    fn nearby_polygon(&mut self, mercator: &Mercator, polygon: &Polygon);
+    fn perp_line(&mut self, mercator: &Mercator, line: Line, width: f64);
+}
+
 // TODO docs
 // everything wgs84 as input
-pub fn calculate(
+pub fn calculate<O: Output>(
     route_wgs84: &LineString,
     mut polygons: Vec<Polygon>,
     mut timer: Timer,
     step_size_meters: f64,
     project_away_meters: f64,
-) -> Result<String> {
+    output: &mut O,
+) {
     let mercator = Mercator::from(bbox(route_wgs84, project_away_meters)).unwrap();
 
-    let mut features = Vec::new();
     for p in &mut polygons {
         mercator.to_mercator_in_place(p);
-    }
-    // Debug them as GJ
-    for p in &polygons {
-        features.push(Feature::from(Geometry::from(&mercator.to_wgs84(p))));
+        output.nearby_polygon(&mercator, p);
     }
 
     timer.step(format!("Making rtree of {} polygons", polygons.len()));
@@ -91,9 +91,7 @@ pub fn calculate(
             continue;
         }
         let full_line = Line::new(test_lines[0].end, test_lines[1].end);
-        let mut f = Feature::from(Geometry::from(&mercator.to_wgs84(&full_line)));
-        f.set_property("width", full_line.euclidean_length());
-        features.push(f);
+        output.perp_line(&mercator, full_line, full_line.euclidean_length());
     }
     timer.pop();
     info!(
@@ -101,8 +99,6 @@ pub fn calculate(
         num_perps, num_hit_checks
     );
     timer.done();
-
-    Ok(serde_json::to_string(&GeoJson::from(features))?)
 }
 
 // Every step_size along a LineString, returns the point and angle

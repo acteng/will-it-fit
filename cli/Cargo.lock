@@ -196,7 +196,9 @@ dependencies = [
  "env_logger",
  "flatgeobuf",
  "geo",
+ "geojson",
  "geozero",
+ "serde_json",
  "utils",
  "widths",
 ]
@@ -1638,13 +1640,10 @@ dependencies = [
 name = "widths"
 version = "0.1.0"
 dependencies = [
- "anyhow",
  "geo",
- "geojson",
  "js-sys",
  "log",
  "rstar",
- "serde_json",
  "utils",
  "wasm-bindgen",
  "web-time",
