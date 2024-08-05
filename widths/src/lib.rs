@@ -14,11 +14,17 @@ mod timer;
 
 pub fn bbox(route_wgs84: &LineString, project_away_meters: f64) -> Rect {
     // Increase the bounding box around the route by the max amount that we'll look away.
-    let mut bbox = route_wgs84.bounding_rect().unwrap();
+    let bbox = route_wgs84.bounding_rect().unwrap();
     // TODO This works in the UK, but make sure this is correct everywhere
-    bbox.set_min(Point::from(bbox.min()).haversine_destination(135.0, project_away_meters));
-    bbox.set_max(Point::from(bbox.max()).haversine_destination(45.0, project_away_meters));
-    bbox
+    let min = Point::from(bbox.min())
+        .haversine_destination(135.0, project_away_meters)
+        .into();
+    let max = Point::from(bbox.max())
+        .haversine_destination(45.0, project_away_meters)
+        .into();
+
+    // TODO Var names above aren't always true, so do this to be safe
+    LineString::new(vec![min, max]).bounding_rect().unwrap()
 }
 
 // TODO docs
