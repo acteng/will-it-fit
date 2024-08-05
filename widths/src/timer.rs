@@ -1,5 +1,5 @@
 use log::{error, info};
-use wasm_bindgen::prelude::JsValue;
+use wasm_bindgen::prelude::JsValue; // TODO extract this part?
 use web_time::Instant;
 
 pub struct Timer {

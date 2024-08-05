@@ -90,14 +90,13 @@ dependencies = [
  "geozero",
  "js-sys",
  "log",
- "rstar",
  "serde",
  "serde_json",
  "utils",
  "wasm-bindgen",
  "wasm-bindgen-futures",
  "web-sys",
- "web-time",
+ "widths",
 ]
 
 [[package]]
@@ -1577,6 +1576,22 @@ dependencies = [
  "home",
  "once_cell",
  "rustix",
+]
+
+[[package]]
+name = "widths"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "geo",
+ "geojson",
+ "js-sys",
+ "log",
+ "rstar",
+ "serde_json",
+ "utils",
+ "wasm-bindgen",
+ "web-time",
 ]
 
 [[package]]

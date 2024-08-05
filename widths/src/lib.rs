@@ -1,5 +1,4 @@
-use anyhow::{bail, Result};
-use flatgeobuf::{FgbFeature, GeozeroGeometry, HttpFgbReader};
+use anyhow::Result;
 use geo::{
     BoundingRect, Coord, Densify, EuclideanLength, HaversineDestination, Line, LineIntersection,
     LineString, Point, Polygon, Rect,
@@ -9,24 +8,34 @@ use log::info;
 use rstar::{primitives::GeomWithData, RTree, RTreeObject};
 use utils::Mercator;
 
-use crate::timer::Timer;
+pub use crate::timer::Timer;
 
-pub async fn calculate(route_wgs84: &LineString, url: &str, mut timer: Timer) -> Result<String> {
-    // TODO Take some params?
-    let step_size_meters = 5.0;
-    let project_away_meters = 50.0;
+mod timer;
 
+pub fn bbox(route_wgs84: &LineString, project_away_meters: f64) -> Rect {
     // Increase the bounding box around the route by the max amount that we'll look away.
     let mut bbox = route_wgs84.bounding_rect().unwrap();
     // TODO This works in the UK, but make sure this is correct everywhere
     bbox.set_min(Point::from(bbox.min()).haversine_destination(135.0, project_away_meters));
     bbox.set_max(Point::from(bbox.max()).haversine_destination(45.0, project_away_meters));
+    bbox
+}
 
-    let mercator = Mercator::from(bbox).unwrap();
+// TODO docs
+// everything wgs84 as input
+pub fn calculate(
+    route_wgs84: &LineString,
+    mut polygons: Vec<Polygon>,
+    mut timer: Timer,
+    step_size_meters: f64,
+    project_away_meters: f64,
+) -> Result<String> {
+    let mercator = Mercator::from(bbox(route_wgs84, project_away_meters)).unwrap();
 
     let mut features = Vec::new();
-    timer.step("Downloading nearby polygons");
-    let polygons = read_nearby_polygons(bbox, url, &mercator).await?;
+    for p in &mut polygons {
+        mercator.to_mercator_in_place(p);
+    }
     // Debug them as GJ
     for p in &polygons {
         features.push(Feature::from(Geometry::from(&mercator.to_wgs84(p))));
@@ -88,29 +97,6 @@ pub async fn calculate(route_wgs84: &LineString, url: &str, mut timer: Timer) ->
     timer.done();
 
     Ok(serde_json::to_string(&GeoJson::from(features))?)
-}
-
-async fn read_nearby_polygons(bbox: Rect, url: &str, mercator: &Mercator) -> Result<Vec<Polygon>> {
-    let mut fgb = HttpFgbReader::open(url)
-        .await?
-        .select_bbox(bbox.min().x, bbox.min().y, bbox.max().x, bbox.max().y)
-        .await?;
-
-    let mut polygons = Vec::new();
-    while let Some(feature) = fgb.next().await? {
-        polygons.push(mercator.to_mercator(&get_polygon(feature)?));
-    }
-    Ok(polygons)
-}
-
-// TODO multipolygons?
-fn get_polygon(f: &FgbFeature) -> Result<Polygon> {
-    let mut p = geozero::geo_types::GeoWriter::new();
-    f.process_geom(&mut p)?;
-    match p.take_geometry().unwrap() {
-        geo::Geometry::Polygon(p) => Ok(p),
-        _ => bail!("Wrong type in fgb"),
-    }
 }
 
 // Every step_size along a LineString, returns the point and angle

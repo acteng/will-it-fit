@@ -1,17 +1,16 @@
 use std::sync::Once;
 
-use anyhow::Result;
-use geo::LineString;
+use anyhow::{bail, Result};
+use flatgeobuf::{FgbFeature, GeozeroGeometry, HttpFgbReader};
+use geo::{LineString, Polygon, Rect};
 use geojson::de::deserialize_geometry;
 
 use serde::Deserialize;
 use wasm_bindgen::prelude::*;
 
-use crate::timer::Timer;
+use widths::Timer;
 
-mod negative_space;
 mod render;
-mod timer;
 
 static START: Once = Once::new();
 
@@ -33,12 +32,22 @@ pub async fn get_negative_space(
     let linestrings: Vec<LineString> = input.into_iter().map(|x| x.geometry).collect();
     let input_route = linestrings[0].clone();
 
-    negative_space::calculate(
+    let mut timer = Timer::new("calculate negative space", progress_cb);
+    let step_size_meters = 5.0;
+    let project_away_meters = 50.0;
+
+    let bbox = widths::bbox(&input_route, project_away_meters);
+    timer.step("Downloading nearby polygons");
+    let url = "http://localhost:5173/out.fgb";
+    let polygons = read_nearby_polygons(bbox, url).await.map_err(err_to_js)?;
+
+    widths::calculate(
         &input_route,
-        "http://localhost:5173/out.fgb",
-        Timer::new("calculate negative space", progress_cb),
+        polygons,
+        timer,
+        step_size_meters,
+        project_away_meters,
     )
-    .await
     .map_err(err_to_js)
 }
 
@@ -69,4 +78,26 @@ struct Input {
 
 fn err_to_js<E: std::fmt::Display>(err: E) -> JsValue {
     JsValue::from_str(&err.to_string())
+}
+
+async fn read_nearby_polygons(bbox: Rect, url: &str) -> Result<Vec<Polygon>> {
+    let mut fgb = HttpFgbReader::open(url)
+        .await?
+        .select_bbox(bbox.min().x, bbox.min().y, bbox.max().x, bbox.max().y)
+        .await?;
+
+    let mut polygons = Vec::new();
+    while let Some(feature) = fgb.next().await? {
+        polygons.push(get_polygon(feature)?);
+    }
+    Ok(polygons)
+}
+
+fn get_polygon(f: &FgbFeature) -> Result<Polygon> {
+    let mut p = geozero::geo_types::GeoWriter::new();
+    f.process_geom(&mut p)?;
+    match p.take_geometry().unwrap() {
+        geo::Geometry::Polygon(p) => Ok(p),
+        _ => bail!("Wrong type in fgb"),
+    }
 }
