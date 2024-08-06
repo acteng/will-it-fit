@@ -25,6 +25,7 @@ fn main() -> Result<()> {
 
     let mut out = Features {
         features: Vec::new(),
+        widths: Vec::new(),
     };
 
     for (idx, edge) in graph.edges.iter().enumerate() {
@@ -47,6 +48,18 @@ fn main() -> Result<()> {
             project_away_meters,
             &mut out,
         );
+
+        let mut sum = 0.0;
+        let mut min = f64::MAX;
+        let n = out.widths.len();
+        for width in out.widths.drain(..) {
+            sum += width;
+            min = min.min(width);
+        }
+        let mut f = Feature::from(Geometry::from(&edge_wgs84));
+        f.set_property("min_width", min);
+        f.set_property("avg_width", sum / (n as f64));
+        out.features.push(f);
     }
 
     Ok(std::fs::write(
@@ -89,6 +102,7 @@ fn get_polygon(f: &FgbFeature) -> Result<Polygon> {
 
 struct Features {
     features: Vec<Feature>,
+    widths: Vec<f64>,
 }
 
 impl widths::Output for Features {
@@ -97,5 +111,7 @@ impl widths::Output for Features {
         let mut f = Feature::from(Geometry::from(&mercator.to_wgs84(&line)));
         f.set_property("width", width);
         self.features.push(f);
+
+        self.widths.push(width);
     }
 }
