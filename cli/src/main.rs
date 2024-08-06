@@ -92,10 +92,7 @@ struct Features {
 }
 
 impl widths::Output for Features {
-    fn nearby_polygon(&mut self, mercator: &Mercator, polygon: &Polygon) {
-        self.features
-            .push(Feature::from(Geometry::from(&mercator.to_wgs84(polygon))));
-    }
+    fn nearby_polygon(&mut self, _: &Mercator, _: &Polygon) {}
     fn perp_line(&mut self, mercator: &Mercator, line: Line, width: f64) {
         let mut f = Feature::from(Geometry::from(&mercator.to_wgs84(&line)));
         f.set_property("width", width);

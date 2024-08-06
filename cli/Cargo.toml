@@ -6,7 +6,7 @@ edition = "2021"
 [dependencies]
 anyhow = "1.0.86"
 env_logger = "0.11.5"
-flatgeobuf = "4.2.1"
+flatgeobuf = { git = "https://github.com/michaelkirk/flatgeobuf/", branch = "mkirk/rust-fix-requests" }
 geo = "0.28.0"
 geojson = { git = "https://github.com/georust/geojson", features = ["geo-types"] }
 geozero = { version = "0.13.0", default-features = false, features = ["with-geo"] }
