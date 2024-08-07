@@ -55,7 +55,7 @@ pub async fn get_negative_space(
 
     let bbox = widths::bbox(&input_route, project_away_meters);
     timer.step("Downloading nearby polygons");
-    let url = "http://localhost:5173/out.fgb";
+    let url = "http://localhost:5173/will-it-fit/out.fgb";
     let polygons = read_nearby_polygons(bbox, url).await.map_err(err_to_js)?;
 
     let mut out = Features {
