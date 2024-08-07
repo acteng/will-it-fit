@@ -32,7 +32,6 @@ fn gpkg_to_geojson<F: Fn(&gdal::vector::Feature, &mut geojson::Feature) -> Resul
 
     let mut writer = FeatureWriter::from_writer(BufWriter::new(File::create(output_path)?));
 
-    let mut count = 0;
     for input_feature in layer.features() {
         progress.inc(1);
         let mut geo = input_feature.geometry().unwrap().to_geo()?;
@@ -72,11 +71,22 @@ fn get_properties(input: &gdal::vector::Feature, output: &mut geojson::Feature) 
         return Ok(false);
     }
 
+    let direction = match input
+        .field_as_string_by_name("directionality")?
+        .unwrap()
+        .as_str()
+    {
+        "Both Directions" => "both",
+        "In Direction" | "In Opposite Direction" => "one-way",
+        x => bail!("Unknown directionality {x}"),
+    };
+
     output.set_property("average_width", average);
     output.set_property("minimum_width", minimum);
     output.set_property("average_rating", rating(&class, average)?);
     output.set_property("minimum_rating", rating(&class, minimum)?);
     output.set_property("class", class);
+    output.set_property("direction", direction);
 
     Ok(true)
 }
