@@ -22,7 +22,7 @@ To run everything in this repo, you'll need:
 
 The web app expects `web/public/out.fgb` to be a flatgeobuffer file with polygons in WGS84 representing space that roads can't go (such as buildings). There are scripts in `data_prep/` to build these from different sources; please see there for examples.
 
-To run the web app, `cd web; npm i` to initially install dependencies. Then `npm run wasm` whenever the Rust code in `backend/` changes. Finally, `npm run dev` starts the web app locally and automatically picks up changes in `web/`.
+To run the web app, `cd web; npm i` to initially install dependencies. Then `npm run wasm` (for fast compilation but slow runtime, `npm run wasm-release` for the opposite tradeoff) whenever the Rust code in `backend/` changes. Finally, `npm run dev` starts the web app locally and automatically picks up changes in `web/`.
 
 ### Code overview
 
