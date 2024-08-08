@@ -4,8 +4,8 @@ use anyhow::{bail, Result};
 use fs_err::File;
 use gdal::vector::LayerAccess;
 use gdal::Dataset;
-use geo::{Coord, MapCoordsInPlace};
-use geojson::FeatureWriter;
+use geo::{Coord, Geometry, MapCoordsInPlace, MultiPolygon};
+use geojson::{FeatureCollection, FeatureWriter};
 use indicatif::{ProgressBar, ProgressStyle};
 
 fn main() -> Result<()> {
@@ -15,13 +15,16 @@ fn main() -> Result<()> {
         std::process::exit(1);
     }
 
-    gpkg_to_geojson(&args[1], "out.geojson", get_properties)
+    let boundaries = read_boundaries("inputs/boundaries.geojson")?;
+    gpkg_to_geojson(&args[1], "out.geojson", process_feature)
 }
 
-fn gpkg_to_geojson<F: Fn(&gdal::vector::Feature, &mut geojson::Feature) -> Result<bool>>(
+fn gpkg_to_geojson<
+    F: Fn(Geometry, gdal::vector::Feature, &mut FeatureWriter<BufWriter<File>>) -> Result<()>,
+>(
     input_path: &str,
     output_path: &str,
-    extract_properties: F,
+    process: F,
 ) -> Result<()> {
     let dataset = Dataset::open(input_path)?;
     // Assume only one layer
@@ -41,10 +44,7 @@ fn gpkg_to_geojson<F: Fn(&gdal::vector::Feature, &mut geojson::Feature) -> Resul
             y: trim_f64(y),
         });
 
-        let mut output_feature = geojson::Feature::from(geojson::Value::from(&geo));
-        if extract_properties(&input_feature, &mut output_feature)? {
-            writer.write_feature(&output_feature)?;
-        }
+        process(geo, input_feature, &mut writer)?;
     }
 
     println!("Wrote {output_path}");
@@ -55,20 +55,24 @@ fn trim_f64(x: f64) -> f64 {
     (x * 10e6).round() / 10e6
 }
 
-fn get_properties(input: &gdal::vector::Feature, output: &mut geojson::Feature) -> Result<bool> {
+fn process_feature(
+    geom: Geometry,
+    input: gdal::vector::Feature,
+    writer: &mut FeatureWriter<BufWriter<File>>,
+) -> Result<()> {
     let Some(average) = input.field_as_double_by_name("roadwidth_average")? else {
-        return Ok(false);
+        return Ok(());
     };
     let Some(minimum) = input.field_as_double_by_name("roadwidth_minimum")? else {
-        return Ok(false);
+        return Ok(());
     };
     let Some(class) = input.field_as_string_by_name("roadclassification")? else {
-        return Ok(false);
+        return Ok(());
     };
 
     // Skip roads that shouldn't be analyzed for pavement parking
     if class == "Motorway" {
-        return Ok(false);
+        return Ok(());
     }
 
     let direction = match input
@@ -81,14 +85,16 @@ fn get_properties(input: &gdal::vector::Feature, output: &mut geojson::Feature) 
         x => bail!("Unknown directionality {x}"),
     };
 
-    output.set_property("average_width", average);
-    output.set_property("minimum_width", minimum);
-    output.set_property("average_rating", rating(&class, average)?);
-    output.set_property("minimum_rating", rating(&class, minimum)?);
-    output.set_property("class", class);
-    output.set_property("direction", direction);
+    let mut output_line = geojson::Feature::from(geojson::Value::from(&geom));
+    output_line.set_property("average_width", average);
+    output_line.set_property("minimum_width", minimum);
+    output_line.set_property("average_rating", rating(&class, average)?);
+    output_line.set_property("minimum_rating", rating(&class, minimum)?);
+    output_line.set_property("class", class);
+    output_line.set_property("direction", direction);
+    writer.write_feature(&output_line)?;
 
-    Ok(true)
+    Ok(())
 }
 
 fn rating(class: &str, width: f64) -> Result<&'static str> {
@@ -118,4 +124,27 @@ fn rating(class: &str, width: f64) -> Result<&'static str> {
 
         _ => bail!("Unknown roadclassification {class}"),
     }
+}
+
+struct Boundary {
+    geometry: MultiPolygon,
+    name: String,
+}
+
+fn read_boundaries(path: &str) -> Result<Vec<Boundary>> {
+    let gj: FeatureCollection = fs_err::read_to_string(path)?.parse()?;
+    let mut boundaries = Vec::new();
+    for f in gj.features {
+        let name = f.property("name").unwrap().as_str().unwrap().to_string();
+        let geometry: MultiPolygon = if matches!(
+            f.geometry.as_ref().unwrap().value,
+            geojson::Value::Polygon(_)
+        ) {
+            MultiPolygon(vec![f.try_into()?])
+        } else {
+            f.try_into()?
+        };
+        boundaries.push(Boundary { geometry, name });
+    }
+    Ok(boundaries)
 }
