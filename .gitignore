@@ -4,4 +4,4 @@ node_modules
 web/public/
 data_prep/inspire
 pavement_parking/inputs
-pavement_parking/out.geojson
+pavement_parking/web/public/out.geojson

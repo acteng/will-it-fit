@@ -18,7 +18,7 @@ fn main() -> Result<()> {
     }
 
     let boundaries = read_boundaries("inputs/boundaries.geojson")?;
-    gpkg_to_geojson(&args[1], "out.geojson", process_feature, boundaries)
+    gpkg_to_geojson(&args[1], "web/public/out.geojson", process_feature, boundaries)
 }
 
 fn gpkg_to_geojson<
