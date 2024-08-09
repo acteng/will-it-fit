@@ -103,6 +103,12 @@ fn process_feature(
         return Ok(());
     };
 
+    // Assume that where there are pavements on both side of the road, then this value is the
+    // sum of both pavements. If there is only one pavement, then this value is the width of that.
+    let Some(pavement_average_width) = input.field_as_double_by_name("presenceofpavement_averagewidth_m")? else {
+        return Ok(());
+    };
+
     // Skip roads that shouldn't be analyzed for pavement parking
     if class == "Motorway" {
         return Ok(());
@@ -118,8 +124,18 @@ fn process_feature(
         x => bail!("Unknown directionality {x}"),
     };
 
-    let average_rating = rating(&class, average)?;
+    let average_rating_inc_pavements = rating(&class, average + pavement_average_width)?;
+    let average_rating_exc_pavements = rating(&class, average)?;
     let minimum_rating = rating(&class, minimum)?;
+
+    let average_rating;
+    
+    if average_rating_inc_pavements == average_rating_exc_pavements{
+        average_rating = "no-change";
+    } else {
+        average_rating = average_rating_exc_pavements;
+    }
+    
 
     // Find all matching boundaries
     for obj in boundaries
@@ -134,8 +150,11 @@ fn process_feature(
                 count[0] += 1;
             } else if average_rating == "amber" {
                 count[1] += 1;
-            } else {
+            } else if average_rating == "green" {
                 count[2] += 1;
+            } else {
+                // No change in rating
+                count[3] += 1;
             }
         }
     }
@@ -144,6 +163,7 @@ fn process_feature(
     let mut output_line = geojson::Feature::from(geojson::Value::from(&geom));
     output_line.set_property("average_width", average);
     output_line.set_property("minimum_width", minimum);
+    output_line.set_property("pavement_average_width", pavement_average_width);
     output_line.set_property("average_rating", average_rating);
     output_line.set_property("minimum_rating", minimum_rating);
     output_line.set_property("class", class);
@@ -185,7 +205,7 @@ fn rating(class: &str, width: f64) -> Result<&'static str> {
 struct Boundaries {
     rtree: RTree<GeomWithData<Polygon, String>>,
     // Per boundary name, the count for [red, amber, green]
-    counts: HashMap<String, [usize; 3]>,
+    counts: HashMap<String, [usize; 4]>,
 }
 
 fn read_boundaries(path: &str) -> Result<Boundaries> {
@@ -206,7 +226,7 @@ fn read_boundaries(path: &str) -> Result<Boundaries> {
         for polygon in mp {
             boundaries.push(GeomWithData::new(polygon, name.clone()));
         }
-        counts.insert(name, [0, 0, 0]);
+        counts.insert(name, [0, 0, 0, 0]);
     }
     let rtree = RTree::bulk_load(boundaries);
 
