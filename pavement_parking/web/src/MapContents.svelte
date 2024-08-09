@@ -51,6 +51,7 @@
         "black",
       ),
     }}
+    beforeId="Road numbers"
   >
     <Popup openOn="hover" let:data popupClass="popup">
       {#if data?.properties}
@@ -80,6 +81,7 @@
       "fill-color": "cyan",
       "fill-opacity": hoverStateFilter(0.2, 0.8),
     }}
+    beforeId="Road numbers"
   >
     <Popup openOn="hover" let:data popupClass="popup">
       {#if data?.properties}
