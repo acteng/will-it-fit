@@ -39,6 +39,11 @@
     <input type="checkbox" bind:checked={filters.showRatings.red} />
     Red
   </label>
+  <label style:color={colors.black}>
+    <input type="checkbox" bind:checked={filters.showRatings.no_change} />
+    No Change
+  </label>
+
 </fieldset>
 
 <fieldset>

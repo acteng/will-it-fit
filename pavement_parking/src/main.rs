@@ -128,13 +128,11 @@ fn process_feature(
     let average_rating_exc_pavements = rating(&class, average)?;
     let minimum_rating = rating(&class, minimum)?;
 
-    let average_rating;
-    
-    if average_rating_inc_pavements == average_rating_exc_pavements{
-        average_rating = "no-change";
+    let average_rating = if average_rating_inc_pavements == average_rating_exc_pavements {
+        "no_change"
     } else {
-        average_rating = average_rating_exc_pavements;
-    }
+        average_rating_exc_pavements
+    };
     
 
     // Find all matching boundaries
