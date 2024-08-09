@@ -1,5 +1,5 @@
 <script lang="ts">
-  import type { Filters } from "./types";
+  import { colors, type Filters } from "./types";
 
   export let filters: Filters;
 
@@ -27,15 +27,15 @@
 
 <fieldset>
   <legend>Show ratings:</legend>
-  <label>
+  <label style:color={colors.green}>
     <input type="checkbox" bind:checked={filters.showRatings.green} />
     Green
   </label>
-  <label>
+  <label style:color={colors.amber}>
     <input type="checkbox" bind:checked={filters.showRatings.amber} />
     Amber
   </label>
-  <label>
+  <label style:color={colors.red}>
     <input type="checkbox" bind:checked={filters.showRatings.red} />
     Red
   </label>

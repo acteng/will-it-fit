@@ -1,5 +1,6 @@
 <script lang="ts">
   import { Modal } from "svelte-utils";
+  import { colors } from "./types";
 
   let show = false;
 </script>
@@ -25,21 +26,21 @@
         <th>Unclassified Roads</th>
       </tr>
       <tr>
-        <th>Green</th>
+        <th style:color={colors.green}>Green</th>
         <td>&ge; 11.8m</td>
         <td>&ge; 11.8m</td>
         <td>&ge; 9m</td>
         <td>&ge; 9m</td>
       </tr>
       <tr>
-        <th>Amber</th>
+        <th style:color={colors.amber}>Amber</th>
         <td>10.4m - 11.8m</td>
         <td>10.4m - 11.8m</td>
         <td>7.5m - 9m</td>
         <td>7.5m - 9m</td>
       </tr>
       <tr>
-        <th>Red</th>
+        <th style:color={colors.red}>Red</th>
         <td>&lt; 10.4m</td>
         <td>&lt; 10.4m</td>
         <td>&lt; 7.5m</td>

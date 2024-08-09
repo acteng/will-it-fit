@@ -7,7 +7,7 @@
     hoverStateFilter,
     FillLayer,
   } from "svelte-maplibre";
-  import type { Filters } from "./types";
+  import { colors, type Filters } from "./types";
   import type { ExpressionSpecification } from "maplibre-gl";
 
   export let show: "streets" | "lad-summary" | "ca-summary";
@@ -43,9 +43,9 @@
       "line-color": constructMatchExpression(
         ["get", streetFilters.useRating],
         {
-          green: "green",
-          amber: "yellow",
-          red: "red",
+          green: colors.green,
+          amber: colors.amber,
+          red: colors.red,
           TODO: "black",
         },
         "black",
@@ -84,9 +84,15 @@
     <Popup openOn="hover" let:data popupClass="popup">
       {#if data?.properties}
         <h1>{data.properties.name}</h1>
-        <p>Reds: {data.properties.red.toLocaleString()}</p>
-        <p>Ambers: {data.properties.amber.toLocaleString()}</p>
-        <p>Greens: {data.properties.green.toLocaleString()}</p>
+        <p style:color={colors.red}>
+          Reds: {data.properties.red.toLocaleString()}
+        </p>
+        <p style:color={colors.amber}>
+          Ambers: {data.properties.amber.toLocaleString()}
+        </p>
+        <p style:color={colors.green}>
+          Greens: {data.properties.green.toLocaleString()}
+        </p>
       {/if}
     </Popup>
   </FillLayer>

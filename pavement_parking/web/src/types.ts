@@ -39,3 +39,9 @@ export const defaultFilters: Filters = {
     "one-way": true,
   },
 };
+
+export const colors = {
+  green: "#006853",
+  amber: "#ffd833",
+  red: "#b73d25",
+};
