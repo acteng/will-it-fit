@@ -6,7 +6,7 @@ edition = "2021"
 [dependencies]
 anyhow = "1.0.75"
 fs-err = "2.11.0"
-gdal = "0.16.0"
+gdal = "0.17.0"
 geo = "0.28.0"
 geojson = { git = "https://github.com/georust/geojson", features = ["geo-types"] }
 indicatif = "0.17.6"
