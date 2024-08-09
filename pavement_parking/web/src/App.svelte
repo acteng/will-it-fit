@@ -4,6 +4,7 @@
   import { MapLibre, type LngLatBoundsLike } from "svelte-maplibre";
   import MapContents from "./MapContents.svelte";
   import StreetFilters from "./StreetFilters.svelte";
+  import About from "./About.svelte";
   import { defaultFilters } from "./types";
 
   let bounds = window.location.hash
@@ -17,6 +18,8 @@
 <Layout>
   <div slot="left">
     <h1>Pavement Parking</h1>
+
+    <About />
 
     <fieldset>
       <legend>Show:</legend>
