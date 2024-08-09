@@ -3,12 +3,15 @@
   import { Layout } from "svelte-utils/two_column_layout";
   import { MapLibre, type LngLatBoundsLike } from "svelte-maplibre";
   import MapContents from "./MapContents.svelte";
+  import StreetFilters from "./StreetFilters.svelte";
+  import { defaultFilters } from "./types";
 
   let bounds = window.location.hash
     ? undefined
     : ([-5.96, 49.89, 2.31, 55.94] as LngLatBoundsLike);
 
   let show: "streets" | "lad-summary" | "ca-summary" = "streets";
+  let streetFilters = defaultFilters;
 </script>
 
 <Layout>
@@ -30,6 +33,10 @@
         Combined Authority boundaries
       </label>
     </fieldset>
+
+    {#if show == "streets"}
+      <StreetFilters bind:filters={streetFilters} />
+    {/if}
   </div>
 
   <div slot="main" style="position: relative; width: 100%; height: 100vh;">
@@ -38,7 +45,7 @@
       hash
       {bounds}
     >
-      <MapContents {show} />
+      <MapContents {show} {streetFilters} />
     </MapLibre>
   </div>
 </Layout>

@@ -6,21 +6,42 @@
     Popup,
     hoverStateFilter,
     FillLayer,
-    type LngLatBoundsLike,
   } from "svelte-maplibre";
+  import type { Filters } from "./types";
+  import type { ExpressionSpecification } from "maplibre-gl";
 
   export let show: "streets" | "lad-summary" | "ca-summary";
+  export let streetFilters: Filters;
+
+  function makeFilter(f: Filters): ExpressionSpecification {
+    let ratings = Object.entries(f.showRatings)
+      .filter((pair) => pair[1])
+      .map((pair) => pair[0]);
+    let classes = Object.entries(f.showClasses)
+      .filter((pair) => pair[1])
+      .map((pair) => pair[0]);
+    let directions = Object.entries(f.showDirections)
+      .filter((pair) => pair[1])
+      .map((pair) => pair[0]);
+    return [
+      "all",
+      ["has", "class"],
+      ["in", ["get", "class"], ["literal", classes]],
+      ["in", ["get", f.useRating], ["literal", ratings]],
+      ["in", ["get", "direction"], ["literal", directions]],
+    ];
+  }
 </script>
 
 <GeoJSON data="/out.geojson" generateId>
   <LineLayer
-    filter={["has", "class"]}
+    filter={makeFilter(streetFilters)}
     layout={{ visibility: show == "streets" ? "visible" : "none" }}
     manageHoverState
     paint={{
       "line-width": hoverStateFilter(5, 10),
       "line-color": constructMatchExpression(
-        ["get", "average_rating"],
+        ["get", streetFilters.useRating],
         {
           green: "green",
           amber: "yellow",
@@ -32,16 +53,18 @@
     }}
   >
     <Popup openOn="hover" let:data popupClass="popup">
-      <h1>{data.properties.class} street</h1>
-      <p>Direction: {data.properties.direction}</p>
-      <p>
-        Average width {data.properties.average_width}, rating {data.properties
-          .average_rating}
-      </p>
-      <p>
-        Minimum width {data.properties.minimum_width}, rating {data.properties
-          .minimum_rating}
-      </p>
+      {#if data?.properties}
+        <h1>{data.properties.class} street</h1>
+        <p>Direction: {data.properties.direction}</p>
+        <p>
+          Average width {data.properties.average_width}, rating {data.properties
+            .average_rating}
+        </p>
+        <p>
+          Minimum width {data.properties.minimum_width}, rating {data.properties
+            .minimum_rating}
+        </p>
+      {/if}
     </Popup>
   </LineLayer>
 
@@ -59,10 +82,12 @@
     }}
   >
     <Popup openOn="hover" let:data popupClass="popup">
-      <h1>{data.properties.name}</h1>
-      <p>Reds: {data.properties.red.toLocaleString()}</p>
-      <p>Ambers: {data.properties.amber.toLocaleString()}</p>
-      <p>Greens: {data.properties.green.toLocaleString()}</p>
+      {#if data?.properties}
+        <h1>{data.properties.name}</h1>
+        <p>Reds: {data.properties.red.toLocaleString()}</p>
+        <p>Ambers: {data.properties.amber.toLocaleString()}</p>
+        <p>Greens: {data.properties.green.toLocaleString()}</p>
+      {/if}
     </Popup>
   </FillLayer>
   <LineLayer
