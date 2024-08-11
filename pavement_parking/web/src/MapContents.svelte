@@ -2,7 +2,6 @@
   import { constructMatchExpression } from "svelte-utils/map";
   import {
     LineLayer,
-    GeoJSON,
     Popup,
     hoverStateFilter,
     FillLayer,
@@ -12,6 +11,7 @@
 
   export let show: "streets" | "lad-summary" | "ca-summary";
   export let streetFilters: Filters;
+  export let sourceLayer: string | undefined;
 
   function makeFilter(f: Filters): ExpressionSpecification {
     let ratings = Object.entries(f.showRatings)
@@ -33,84 +33,85 @@
   }
 </script>
 
-<GeoJSON data="/out.geojson" generateId>
-  <LineLayer
-    filter={makeFilter(streetFilters)}
-    layout={{ visibility: show == "streets" ? "visible" : "none" }}
-    manageHoverState
-    paint={{
-      "line-width": hoverStateFilter(5, 10),
-      "line-color": constructMatchExpression(
-        ["get", streetFilters.useRating],
-        {
-          green: colors.green,
-          amber: colors.amber,
-          red: colors.red,
-          TODO: "black",
-        },
-        "black",
-      ),
-    }}
-    beforeId="Road numbers"
-  >
-    <Popup openOn="hover" let:data popupClass="popup">
-      {#if data?.properties}
-        <h1>{data.properties.class} street</h1>
-        <p>Direction: {data.properties.direction}</p>
-        <p>
-          Average width {data.properties.average_width}, rating {data.properties
-            .average_rating}
-        </p>
-        <p>
-          Minimum width {data.properties.minimum_width}, rating {data.properties
-            .minimum_rating}
-        </p>
-      {/if}
-    </Popup>
-  </LineLayer>
+<LineLayer
+  {sourceLayer}
+  filter={makeFilter(streetFilters)}
+  layout={{ visibility: show == "streets" ? "visible" : "none" }}
+  manageHoverState
+  paint={{
+    "line-width": hoverStateFilter(5, 10),
+    "line-color": constructMatchExpression(
+      ["get", streetFilters.useRating],
+      {
+        green: colors.green,
+        amber: colors.amber,
+        red: colors.red,
+        TODO: "black",
+      },
+      "black",
+    ),
+  }}
+  beforeId="Road numbers"
+>
+  <Popup openOn="hover" let:data popupClass="popup">
+    {#if data?.properties}
+      <h1>{data.properties.class} street</h1>
+      <p>Direction: {data.properties.direction}</p>
+      <p>
+        Average width {data.properties.average_width}, rating {data.properties
+          .average_rating}
+      </p>
+      <p>
+        Minimum width {data.properties.minimum_width}, rating {data.properties
+          .minimum_rating}
+      </p>
+    {/if}
+  </Popup>
+</LineLayer>
 
-  <FillLayer
-    filter={[
-      "all",
-      ["has", "name"],
-      ["in", show == "lad-summary" ? "LAD_" : "CA_", ["get", "name"]],
-    ]}
-    layout={{ visibility: show.endsWith("-summary") ? "visible" : "none" }}
-    manageHoverState
-    paint={{
-      "fill-color": "cyan",
-      "fill-opacity": hoverStateFilter(0.2, 0.8),
-    }}
-    beforeId="Road numbers"
-  >
-    <Popup openOn="hover" let:data popupClass="popup">
-      {#if data?.properties}
-        <h1>{data.properties.name}</h1>
-        <p style:color={colors.red}>
-          Reds: {data.properties.red.toLocaleString()}
-        </p>
-        <p style:color={colors.amber}>
-          Ambers: {data.properties.amber.toLocaleString()}
-        </p>
-        <p style:color={colors.green}>
-          Greens: {data.properties.green.toLocaleString()}
-        </p>
-      {/if}
-    </Popup>
-  </FillLayer>
-  <LineLayer
-    filter={[
-      "all",
-      ["has", "name"],
-      ["in", show == "lad-summary" ? "LAD_" : "CA_", ["get", "name"]],
-    ]}
-    layout={{ visibility: show.endsWith("-summary") ? "visible" : "none" }}
-    paint={{
-      "line-width": 5,
-      "line-color": "black",
-    }}
-  />
-</GeoJSON>
+<FillLayer
+  {sourceLayer}
+  filter={[
+    "all",
+    ["has", "name"],
+    ["in", show == "lad-summary" ? "LAD_" : "CA_", ["get", "name"]],
+  ]}
+  layout={{ visibility: show.endsWith("-summary") ? "visible" : "none" }}
+  manageHoverState
+  paint={{
+    "fill-color": "cyan",
+    "fill-opacity": hoverStateFilter(0.2, 0.8),
+  }}
+  beforeId="Road numbers"
+>
+  <Popup openOn="hover" let:data popupClass="popup">
+    {#if data?.properties}
+      <h1>{data.properties.name}</h1>
+      <p style:color={colors.red}>
+        Reds: {data.properties.red.toLocaleString()}
+      </p>
+      <p style:color={colors.amber}>
+        Ambers: {data.properties.amber.toLocaleString()}
+      </p>
+      <p style:color={colors.green}>
+        Greens: {data.properties.green.toLocaleString()}
+      </p>
+    {/if}
+  </Popup>
+</FillLayer>
+<LineLayer
+  {sourceLayer}
+  filter={[
+    "all",
+    ["has", "name"],
+    ["in", show == "lad-summary" ? "LAD_" : "CA_", ["get", "name"]],
+  ]}
+  layout={{ visibility: show.endsWith("-summary") ? "visible" : "none" }}
+  paint={{
+    "line-width": 5,
+    "line-color": "black",
+  }}
+/>
 
 <style>
   :global(.popup .maplibregl-popup-content) {

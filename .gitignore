@@ -5,3 +5,4 @@ web/public/
 data_prep/inspire
 pavement_parking/inputs
 pavement_parking/web/public/out.geojson
+pavement_parking/web/public/pavement.pmtiles
