@@ -5,7 +5,9 @@
     GeoJSON,
     VectorTileSource,
     MapLibre,
+    MapEvents,
     type LngLatBoundsLike,
+    type Map,
   } from "svelte-maplibre";
   import PavementLayers from "./PavementLayers.svelte";
   import SummaryLayers from "./SummaryLayers.svelte";
@@ -28,6 +30,17 @@
       : "pavements.pmtiles",
     "summaries.geojson",
   );
+
+  let map: Map;
+  let zoom = 0;
+
+  $: if (map) {
+    onZoom();
+  }
+
+  function onZoom() {
+    zoom = map.getZoom();
+  }
 </script>
 
 {#if pavementsUrl}
@@ -54,7 +67,11 @@
       </fieldset>
 
       {#if show == "streets"}
-        <StreetFilters bind:filters={streetFilters} />
+        {#if zoom >= 10}
+          <StreetFilters bind:filters={streetFilters} />
+        {:else}
+          <p>Zoom in more to see streets</p>
+        {/if}
       {/if}
     </div>
 
@@ -63,7 +80,10 @@
         style="https://api.maptiler.com/maps/uk-openzoomstack-light/style.json?key=MZEJTanw3WpxRvt7qDfo"
         hash
         {bounds}
+        bind:map
       >
+        <MapEvents on:zoom={onZoom} />
+
         {#if pavementsUrl.endsWith(".geojson")}
           <GeoJSON data={pavementsUrl} generateId>
             <PavementLayers {show} {streetFilters} sourceLayer={undefined} />
