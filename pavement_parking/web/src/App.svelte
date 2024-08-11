@@ -7,7 +7,8 @@
     MapLibre,
     type LngLatBoundsLike,
   } from "svelte-maplibre";
-  import MapContents from "./MapContents.svelte";
+  import PavementLayers from "./PavementLayers.svelte";
+  import SummaryLayers from "./SummaryLayers.svelte";
   import StreetFilters from "./StreetFilters.svelte";
   import About from "./About.svelte";
   import { defaultFilters } from "./types";
@@ -20,10 +21,16 @@
   let streetFilters = defaultFilters;
 
   let params = new URLSearchParams(window.location.search);
-  let dataSource = params.get("data") || "";
+  let pavementsUrl = params.get("data") || "";
+  let summaryUrl = pavementsUrl.replace(
+    pavementsUrl.endsWith(".geojson")
+      ? "pavements.geojson"
+      : "pavements.pmtiles",
+    "summaries.geojson",
+  );
 </script>
 
-{#if dataSource}
+{#if pavementsUrl}
   <Layout>
     <div slot="left">
       <h1>Pavement Parking</h1>
@@ -57,22 +64,24 @@
         hash
         {bounds}
       >
-        {#if dataSource.endsWith(".geojson")}
-          <GeoJSON data={dataSource} generateId>
-            <MapContents {show} {streetFilters} sourceLayer={undefined} />
+        {#if pavementsUrl.endsWith(".geojson")}
+          <GeoJSON data={pavementsUrl} generateId>
+            <PavementLayers {show} {streetFilters} sourceLayer={undefined} />
           </GeoJSON>
-        {:else if dataSource.endsWith(".pmtiles")}
-          <VectorTileSource url={`pmtiles://${dataSource}`}>
-            <MapContents {show} {streetFilters} sourceLayer="pavement" />
+        {:else if pavementsUrl.endsWith(".pmtiles")}
+          <VectorTileSource url={`pmtiles://${pavementsUrl}`}>
+            <PavementLayers {show} {streetFilters} sourceLayer="pavements" />
           </VectorTileSource>
         {/if}
+
+        <SummaryLayers {show} url={summaryUrl} />
       </MapLibre>
     </div>
   </Layout>
 {:else}
   <p>
     Data source not specified. If you're developing locally, try <a
-      href="index.html?data=/out.geojson"
+      href="index.html?data=/pavements.geojson"
     >
       this
     </a>

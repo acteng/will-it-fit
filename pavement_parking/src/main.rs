@@ -18,7 +18,13 @@ fn main() -> Result<()> {
     }
 
     let boundaries = read_boundaries("inputs/boundaries.geojson")?;
-    gpkg_to_geojson(&args[1], "web/public/out.geojson", process_feature, boundaries)
+    gpkg_to_geojson(
+        &args[1],
+        "web/public/summaries.geojson",
+        "web/public/pavements.geojson",
+        process_feature,
+        boundaries,
+    )
 }
 
 fn gpkg_to_geojson<
@@ -30,7 +36,8 @@ fn gpkg_to_geojson<
     ) -> Result<()>,
 >(
     input_path: &str,
-    output_path: &str,
+    summaries_output_path: &str,
+    pavements_output_path: &str,
     process: F,
     mut boundaries: Boundaries,
 ) -> Result<()> {
@@ -41,7 +48,8 @@ fn gpkg_to_geojson<
     let progress = ProgressBar::new(layer.feature_count()).with_style(ProgressStyle::with_template(
         "[{elapsed_precise}] [{wide_bar:.cyan/blue}] {human_pos}/{human_len} ({per_sec}, {eta})").unwrap());
 
-    let mut writer = FeatureWriter::from_writer(BufWriter::new(File::create(output_path)?));
+    let mut pavements_writer =
+        FeatureWriter::from_writer(BufWriter::new(File::create(pavements_output_path)?));
 
     for input_feature in layer.features() {
         progress.inc(1);
@@ -53,10 +61,12 @@ fn gpkg_to_geojson<
         });
         let ls: LineString = geo.try_into()?;
 
-        process(ls, input_feature, &mut boundaries, &mut writer)?;
+        process(ls, input_feature, &mut boundaries, &mut pavements_writer)?;
     }
 
     // Write all boundaries with non-zero counts
+    let mut summaries_writer =
+        FeatureWriter::from_writer(BufWriter::new(File::create(summaries_output_path)?));
     for obj in boundaries.rtree.drain() {
         let mut f = geojson::Feature::from(geojson::Value::from(obj.geom()));
         let counts = boundaries.counts[&obj.data];
@@ -65,11 +75,11 @@ fn gpkg_to_geojson<
             f.set_property("red", counts[0]);
             f.set_property("amber", counts[1]);
             f.set_property("green", counts[2]);
-            writer.write_feature(&f)?;
+            summaries_writer.write_feature(&f)?;
         }
     }
 
-    println!("Wrote {output_path}");
+    println!("Wrote {summaries_output_path} and {pavements_output_path}");
     Ok(())
 }
 

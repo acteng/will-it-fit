@@ -5,14 +5,14 @@
 3.  (Optionally / for large inputs) Turn that into pmtiles:
 
 ```
-time tippecanoe web/public/out.geojson \
+time tippecanoe web/public/pavements.geojson \
   --force \
   --generate-ids \
-  -l pavement \
+  -l pavements \
   -Z10 -z11 \
   --drop-densest-as-needed \
   --extend-zooms-if-still-dropping \
-  -o web/public/pavement.pmtiles
+  -o web/public/pavements.pmtiles
 ```
 
 4.  Set up the web app: `cd web; npm i`
