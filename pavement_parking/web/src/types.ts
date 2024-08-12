@@ -1,5 +1,5 @@
 export interface Filters {
-  useRating: "average_rating" | "minimum_rating";
+  useRating: "average_rating" | "rating_change" | "minimum_rating";
   showRatings: {
     green: boolean;
     amber: boolean;

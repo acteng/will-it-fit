@@ -128,12 +128,11 @@ fn process_feature(
     let average_rating_exc_pavements = rating(&class, average)?;
     let minimum_rating = rating(&class, minimum)?;
 
-    let average_rating = if average_rating_inc_pavements == average_rating_exc_pavements {
+    let rating_change = if average_rating_inc_pavements == average_rating_exc_pavements {
         "no_change"
     } else {
         average_rating_exc_pavements
     };
-    
 
     // Find all matching boundaries
     for obj in boundaries
@@ -143,12 +142,12 @@ fn process_feature(
         // TODO Or even just intersects, to handle boundaries?
         if obj.geom().contains(&geom) {
             let count = boundaries.counts.get_mut(&obj.data).unwrap();
-            // TODO Use average_rating for now
-            if average_rating == "red" {
+            // TODO Use average_rating_exc_pavements for now
+            if average_rating_exc_pavements == "red" {
                 count[0] += 1;
-            } else if average_rating == "amber" {
+            } else if average_rating_exc_pavements == "amber" {
                 count[1] += 1;
-            } else if average_rating == "green" {
+            } else if average_rating_exc_pavements == "green" {
                 count[2] += 1;
             } else {
                 // No change in rating
@@ -162,8 +161,10 @@ fn process_feature(
     output_line.set_property("average_width", average);
     output_line.set_property("minimum_width", minimum);
     output_line.set_property("pavement_average_width", pavement_average_width);
-    output_line.set_property("average_rating", average_rating);
+    output_line.set_property("average_rating", average_rating_exc_pavements);
+    output_line.set_property("average_rating_inc_pavements", average_rating_inc_pavements);
     output_line.set_property("minimum_rating", minimum_rating);
+    output_line.set_property("rating_change", rating_change);
     output_line.set_property("class", class);
     output_line.set_property("direction", direction);
     writer.write_feature(&output_line)?;
