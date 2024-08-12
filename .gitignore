@@ -4,4 +4,6 @@ node_modules
 web/public/
 data_prep/inspire
 pavement_parking/inputs
-pavement_parking/web/public/out.geojson
+pavement_parking/web/public/summaries.geojson
+pavement_parking/web/public/pavements.geojson
+pavement_parking/web/public/pavements.pmtiles
