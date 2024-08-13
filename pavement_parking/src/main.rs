@@ -105,7 +105,9 @@ fn process_feature(
 
     // Assume that where there are pavements on both side of the road, then this value is the
     // sum of both pavements. If there is only one pavement, then this value is the width of that.
-    let Some(pavement_average_width) = input.field_as_double_by_name("presenceofpavement_averagewidth_m")? else {
+    let Some(pavement_average_width) =
+        input.field_as_double_by_name("presenceofpavement_averagewidth_m")?
+    else {
         return Ok(());
     };
 
