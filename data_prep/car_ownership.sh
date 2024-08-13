@@ -24,5 +24,5 @@ popgetter data \
     --force-run \
     --bbox 422363,561108,430358,566910
 
-mapshaper car_ownership_epsg27000.geojson -proj init=EPSG:27700 crs=wgs84 -o car_ownership.geojson
+mapshaper car_ownership_epsg27000.geojson -rename-fields number_of_cars_and_vans="Number of cars or vans: Total: All households" -proj init=EPSG:27700 crs=wgs84 -o car_ownership.geojson
 popd
