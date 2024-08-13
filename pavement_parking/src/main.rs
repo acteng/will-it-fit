@@ -93,19 +93,19 @@ fn process_feature(
     boundaries: &mut Boundaries,
     writer: &mut FeatureWriter<BufWriter<File>>,
 ) -> Result<()> {
-    let Some(average) = input.field_as_double_by_name("roadwidth_average")? else {
+    let Some(road_average) = input.field_as_double_by_name("roadwidth_average")? else {
         return Ok(());
     };
-    let Some(minimum) = input.field_as_double_by_name("roadwidth_minimum")? else {
+    let Some(road_minimum) = input.field_as_double_by_name("roadwidth_minimum")? else {
         return Ok(());
     };
     let Some(class) = input.field_as_string_by_name("roadclassification")? else {
         return Ok(());
     };
 
-    // Assume that where there are pavements on both side of the road, then this value is the
+    // Assume that where there are pavements on both sides of the road, then this value is the
     // sum of both pavements. If there is only one pavement, then this value is the width of that.
-    let Some(pavement_average_width) =
+    let Some(pavement_average) =
         input.field_as_double_by_name("presenceofpavement_averagewidth_m")?
     else {
         return Ok(());
@@ -126,9 +126,9 @@ fn process_feature(
         x => bail!("Unknown directionality {x}"),
     };
 
-    let average_rating_inc_pavements = rating(&class, average + pavement_average_width)?;
-    let average_rating_exc_pavements = rating(&class, average)?;
-    let minimum_rating = rating(&class, minimum)?;
+    let average_rating_inc_pavements = rating(&class, road_average + pavement_average)?;
+    let average_rating_exc_pavements = rating(&class, road_average)?;
+    let minimum_rating = rating(&class, road_minimum)?;
 
     let rating_change = if average_rating_inc_pavements == average_rating_exc_pavements {
         "no_change"
@@ -160,8 +160,8 @@ fn process_feature(
 
     // Include the road in the output
     let mut output_line = geojson::Feature::from(geojson::Value::from(&geom));
-    output_line.set_property("average_width", average);
-    output_line.set_property("minimum_width", minimum);
+    output_line.set_property("average_width", road_average);
+    output_line.set_property("minimum_width", road_minimum);
     output_line.set_property("pavement_average_width", pavement_average_width);
     output_line.set_property("average_rating", average_rating_exc_pavements);
     output_line.set_property("average_rating_inc_pavements", average_rating_inc_pavements);

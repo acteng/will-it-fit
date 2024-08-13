@@ -43,7 +43,8 @@
     <input type="checkbox" bind:checked={filters.showRatings.red} />
     Red
   </label>
-  <label style:color={colors.black}>
+  <label>
+    <!-- The color doesn't show up -->
     <input type="checkbox" bind:checked={filters.showRatings.no_change} />
     No Change
   </label>
