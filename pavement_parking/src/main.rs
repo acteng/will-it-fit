@@ -197,7 +197,6 @@ fn parkable_kerb_length(geom: &LineString, rating: &str, class: &str) -> f64 {
     let kerb_length = match rating{
         // If the road is wide enough, assume that both sides are parkable
         "green" => 2.0 * raw_length,
-
         "amber" => raw_length,
         "red" => match class {
             "A Road" => 0.0,
@@ -206,6 +205,7 @@ fn parkable_kerb_length(geom: &LineString, rating: &str, class: &str) -> f64 {
             _ => panic!("Unknown class {class}"),
             
         },
+        "TODO" => raw_length,
         _ => panic!("Unknown rating {rating}"),
     };
 
@@ -216,6 +216,16 @@ fn parkable_kerb_length(geom: &LineString, rating: &str, class: &str) -> f64 {
     // - For short roads, would the same intervention be applied as for long roads?
 
     kerb_length
+}
+
+fn aggregate_kerb_length_per_oa() {
+    // For each output area, sum the kerb length where it is possible to park a car.
+    // Calculate the parkable kerb length per car in the area.
+
+    // Assign each road to exactly one output area. If it intersects multiple output areas,
+    // it can be assigned by arbitrary but repeatable method.
+
+    // For each output area, sum the kerb length where it is possible to park a car.
 }
 
 
