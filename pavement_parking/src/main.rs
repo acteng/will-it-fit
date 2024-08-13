@@ -1,11 +1,11 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, os::macos::raw};
 use std::io::BufWriter;
 
 use anyhow::{bail, Result};
 use fs_err::File;
 use gdal::vector::LayerAccess;
 use gdal::Dataset;
-use geo::{Contains, Coord, LineString, MapCoordsInPlace, MultiPolygon, Polygon};
+use geo::{Contains, Coord, GeodesicLength, LineString, MapCoordsInPlace, MultiPolygon, Polygon};
 use geojson::{FeatureCollection, FeatureWriter};
 use indicatif::{ProgressBar, ProgressStyle};
 use rstar::{primitives::GeomWithData, RTree, RTreeObject};
@@ -136,6 +136,9 @@ fn process_feature(
         average_rating_exc_pavements
     };
 
+    // Estimate the length of the kerb where it is possible to park a car
+    let parkable_length = parkable_kerb_length(&geom, &average_rating, &class);
+
     // Find all matching boundaries
     for obj in boundaries
         .rtree
@@ -167,6 +170,7 @@ fn process_feature(
     output_line.set_property("average_rating_inc_pavements", average_rating_inc_pavements);
     output_line.set_property("minimum_rating", minimum_rating);
     output_line.set_property("rating_change", rating_change);
+    output_line.set_property("parkable_length", parkable_length);
     output_line.set_property("class", class);
     output_line.set_property("direction", direction);
     writer.write_feature(&output_line)?;
@@ -202,6 +206,39 @@ fn rating(class: &str, width: f64) -> Result<&'static str> {
         _ => bail!("Unknown roadclassification {class}"),
     }
 }
+
+fn parkable_kerb_length(geom: &LineString, rating: &str, class: &str) -> f64 {
+    // Returns the length of the kerb where it is possible to park a car
+    // i.e. not on a junction or a pedestrian crossing, etc.
+    // This attempts to implement the table of proposed interventions in
+    // the Pavement Parking Assessment Document
+
+    let raw_length = geom.geodesic_length();
+
+    let kerb_length = match rating{
+        // If the road is wide enough, assume that both sides are parkable
+        "green" => 2.0 * raw_length,
+
+        "amber" => raw_length,
+        "red" => match class {
+            "A Road" => 0.0,
+            "B Road" | "Classified Unnumbered" | "Unclassified" => raw_length,
+            "Unknown" | "Not Classified" => raw_length,
+            _ => panic!("Unknown class {class}"),
+            
+        },
+        _ => panic!("Unknown rating {rating}"),
+    };
+
+    // TODO - additional considerations:
+    // - One-way roads. Is the widths/rating relationship the same as for two-way roads?
+    // - Roads with parking restrictions (including residence parking). How to handle these?
+    // - Maybe subtract a length near each junction, pedestrian crossing, school entrance, etc.
+    // - For short roads, would the same intervention be applied as for long roads?
+
+    kerb_length
+}
+
 
 struct Boundaries {
     rtree: RTree<GeomWithData<Polygon, String>>,
