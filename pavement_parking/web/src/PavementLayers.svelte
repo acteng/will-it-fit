@@ -64,7 +64,8 @@
         {#if data.properties.rating_change == "no_change"}
           Rating is not changed by excluding pavement parking
         {:else}
-          Change: Rating including pavement parking is {data.properties.average_rating_inc_pavements}
+          Change: Rating including pavement parking is {data.properties
+            .average_rating_inc_pavements}
         {/if}
       </p>
     {/if}

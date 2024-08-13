@@ -47,7 +47,6 @@
     <input type="checkbox" bind:checked={filters.showRatings.no_change} />
     No Change
   </label>
-
 </fieldset>
 
 <fieldset>
