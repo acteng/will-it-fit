@@ -165,7 +165,7 @@ fn process_feature(
     };
 
     let (output_area_geoid, parkable_length ) = aggregate_kerb_length_per_oa(
-        census_areas, &geom, average_rating, &class)?;
+        census_areas, &geom, &average_rating_exc_pavements, &class)?;
 
     // Find all matching boundaries
     for obj in boundaries
@@ -193,7 +193,7 @@ fn process_feature(
     let mut output_line = geojson::Feature::from(geojson::Value::from(&geom));
     output_line.set_property("average_width", road_average);
     output_line.set_property("minimum_width", road_minimum);
-    output_line.set_property("pavement_average_width", pavement_average_width);
+    output_line.set_property("pavement_average_width", pavement_average);
     output_line.set_property("average_rating", average_rating_exc_pavements);
     output_line.set_property("average_rating_inc_pavements", average_rating_inc_pavements);
     output_line.set_property("minimum_rating", minimum_rating);
