@@ -121,13 +121,21 @@ fn process_feature(
     census_areas: &mut CensusAreas,
     writer: &mut FeatureWriter<BufWriter<File>>,
 ) -> Result<()> {
-    let Some(average) = input.field_as_double_by_name("roadwidth_average")? else {
+    let Some(road_average) = input.field_as_double_by_name("roadwidth_average")? else {
         return Ok(());
     };
-    let Some(minimum) = input.field_as_double_by_name("roadwidth_minimum")? else {
+    let Some(road_minimum) = input.field_as_double_by_name("roadwidth_minimum")? else {
         return Ok(());
     };
     let Some(class) = input.field_as_string_by_name("roadclassification")? else {
+        return Ok(());
+    };
+
+    // Assume that where there are pavements on both sides of the road, then this value is the
+    // sum of both pavements. If there is only one pavement, then this value is the width of that.
+    let Some(pavement_average) =
+        input.field_as_double_by_name("presenceofpavement_averagewidth_m")?
+    else {
         return Ok(());
     };
 
@@ -146,8 +154,15 @@ fn process_feature(
         x => bail!("Unknown directionality {x}"),
     };
 
-    let average_rating = rating(&class, average)?;
-    let minimum_rating = rating(&class, minimum)?;
+    let average_rating_inc_pavements = rating(&class, road_average + pavement_average)?;
+    let average_rating_exc_pavements = rating(&class, road_average)?;
+    let minimum_rating = rating(&class, road_minimum)?;
+
+    let rating_change = if average_rating_inc_pavements == average_rating_exc_pavements {
+        "no_change"
+    } else {
+        average_rating_exc_pavements
+    };
 
     let (output_area_geoid, parkable_length ) = aggregate_kerb_length_per_oa(
         census_areas, &geom, average_rating, &class)?;
@@ -160,25 +175,31 @@ fn process_feature(
         // TODO Or even just intersects, to handle boundaries?
         if obj.geom().contains(&geom) {
             let count = boundaries.counts.get_mut(&obj.data).unwrap();
-            // TODO Use average_rating for now
-            if average_rating == "red" {
+            // TODO Use average_rating_exc_pavements for now
+            if average_rating_exc_pavements == "red" {
                 count[0] += 1;
-            } else if average_rating == "amber" {
+            } else if average_rating_exc_pavements == "amber" {
                 count[1] += 1;
-            } else {
+            } else if average_rating_exc_pavements == "green" {
                 count[2] += 1;
+            } else {
+                // No change in rating
+                count[3] += 1;
             }
         }
     }
 
     // Include the road in the output
     let mut output_line = geojson::Feature::from(geojson::Value::from(&geom));
-    output_line.set_property("average_width", average);
-    output_line.set_property("minimum_width", minimum);
-    output_line.set_property("average_rating", average_rating);
+    output_line.set_property("average_width", road_average);
+    output_line.set_property("minimum_width", road_minimum);
+    output_line.set_property("pavement_average_width", pavement_average_width);
+    output_line.set_property("average_rating", average_rating_exc_pavements);
+    output_line.set_property("average_rating_inc_pavements", average_rating_inc_pavements);
     output_line.set_property("minimum_rating", minimum_rating);
     output_line.set_property("parkable_length", parkable_length);
     output_line.set_property("output_area_geoid", output_area_geoid.as_str());
+    output_line.set_property("rating_change", rating_change);
     output_line.set_property("class", class);
     output_line.set_property("direction", direction);
     writer.write_feature(&output_line)?;
@@ -301,7 +322,7 @@ fn aggregate_kerb_length_per_oa(
 struct Boundaries {
     rtree: RTree<GeomWithData<Polygon, String>>,
     // Per boundary name, the count for [red, amber, green]
-    counts: HashMap<String, [usize; 3]>
+    counts: HashMap<String, [usize; 4]>
 }
 
 struct CensusAreas {
@@ -328,7 +349,7 @@ fn read_boundaries(path: &str) -> Result<Boundaries> {
         for polygon in mp {
             boundaries.push(GeomWithData::new(polygon, name.clone()));
         }
-        counts.insert(name, [0, 0, 0]);
+        counts.insert(name, [0, 0, 0, 0]);
     }
     let rtree = RTree::bulk_load(boundaries);
 

@@ -17,11 +17,15 @@
   <legend>Color ratings using:</legend>
   <label>
     <input type="radio" value="average_rating" bind:group={filters.useRating} />
-    average width
+    average width (all roads)
+  </label>
+  <label>
+    <input type="radio" value="rating_change" bind:group={filters.useRating} />
+    average width (changes only)
   </label>
   <label>
     <input type="radio" value="minimum_rating" bind:group={filters.useRating} />
-    minimum width
+    minimum width (all roads)
   </label>
 </fieldset>
 
@@ -38,6 +42,11 @@
   <label style:color={colors.red}>
     <input type="checkbox" bind:checked={filters.showRatings.red} />
     Red
+  </label>
+  <label>
+    <!-- The color doesn't show up -->
+    <input type="checkbox" bind:checked={filters.showRatings.no_change} />
+    No Change
   </label>
 </fieldset>
 

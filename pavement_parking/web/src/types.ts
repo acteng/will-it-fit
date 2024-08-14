@@ -1,9 +1,10 @@
 export interface Filters {
-  useRating: "average_rating" | "minimum_rating";
+  useRating: "average_rating" | "rating_change" | "minimum_rating";
   showRatings: {
     green: boolean;
     amber: boolean;
     red: boolean;
+    no_change: boolean;
   };
   showClasses: {
     "A Road": boolean;
@@ -25,6 +26,7 @@ export const defaultFilters: Filters = {
     green: true,
     amber: true,
     red: true,
+    no_change: true,
   },
   showClasses: {
     "A Road": true,
@@ -44,4 +46,5 @@ export const colors = {
   green: "#006853",
   amber: "#ffd833",
   red: "#b73d25",
+  black: "#000000",
 };

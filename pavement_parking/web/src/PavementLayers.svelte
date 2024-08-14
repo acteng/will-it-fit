@@ -53,12 +53,21 @@
       <h1>{data.properties.class} street</h1>
       <p>Direction: {data.properties.direction}</p>
       <p>
-        Average width {data.properties.average_width}, rating {data.properties
-          .average_rating}
+        Average road width {data.properties.average_width}, rating {data
+          .properties.average_rating}
       </p>
       <p>
-        Minimum width {data.properties.minimum_width}, rating {data.properties
-          .minimum_rating}
+        Minimum road width {data.properties.minimum_width}, rating {data
+          .properties.minimum_rating}
+      </p>
+      <p>Pavement average width: {data.properties.pavement_average_width}</p>
+      <p>
+        {#if data.properties.rating_change == "no_change"}
+          Rating is not changed by excluding pavement parking
+        {:else}
+          Change: Rating including pavement parking is {data.properties
+            .average_rating_inc_pavements}
+        {/if}
       </p>
     {/if}
   </Popup>
