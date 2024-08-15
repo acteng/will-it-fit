@@ -8,7 +8,7 @@
   } from "svelte-maplibre";
   import { colors } from "./types";
 
-  export let show: "streets" | "lad-summary" | "ca-summary";
+  export let show: "streets" | "lad-summary" | "ca-summary" | "census-area";
   export let url: string;
 </script>
 

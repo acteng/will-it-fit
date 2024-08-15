@@ -197,9 +197,9 @@ fn process_feature(
     output_line.set_property("average_rating", average_rating_exc_pavements);
     output_line.set_property("average_rating_inc_pavements", average_rating_inc_pavements);
     output_line.set_property("minimum_rating", minimum_rating);
-    output_line.set_property("rating_change", rating_change);
     output_line.set_property("parkable_length", parkable_length);
     output_line.set_property("output_area_geoid", output_area_geoid.as_str());
+    output_line.set_property("rating_change", rating_change);
     output_line.set_property("class", class);
     output_line.set_property("direction", direction);
     writer.write_feature(&output_line)?;
