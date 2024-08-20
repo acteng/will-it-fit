@@ -36,7 +36,7 @@
           ['to-color', '#ff4444'],
           15,
           ['to-color', '#ffdddd'],
-          120,
+          20,
           ['to-color', '#ffffff']
         ]
       ],

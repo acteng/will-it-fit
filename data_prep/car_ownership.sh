@@ -22,7 +22,14 @@ popgetter data \
     --geometry-level oa \
     --id c4149c5b \
     --force-run \
-    --bbox 422363,561108,430358,566910
+    --bbox 418370,553902,434445,573095
+
+
+# Extent
+# -1.7152266318170799,54.8795524968294970 : -1.4623976201033799,55.0511760757526005
+# 418370.32122359605, 553902.2295080912
+# 434445.6550810034, 573095.7358280681
+
 
 mapshaper car_ownership_epsg27000.geojson -rename-fields number_of_cars_and_vans="Number of cars or vans: Total: All households" -proj init=EPSG:27700 crs=wgs84 -o car_ownership.geojson
 popd
