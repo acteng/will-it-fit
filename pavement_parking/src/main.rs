@@ -1,13 +1,14 @@
-use std::any::Any;
-use std::hash::Hash;
-use std::{collections::HashMap, os::macos::raw};
+use std::collections::HashMap;
 use std::io::BufWriter;
 
 use anyhow::{bail, Result};
 use fs_err::File;
 use gdal::vector::LayerAccess;
 use gdal::Dataset;
-use geo::{Contains, Coord, GeodesicLength, Intersects, LineString, MapCoordsInPlace, MultiPolygon, Polygon};
+use geo::{
+    Contains, Coord, GeodesicLength, Intersects, LineString, MapCoordsInPlace, MultiPolygon,
+    Polygon,
+};
 use geojson::{FeatureCollection, FeatureWriter};
 use indicatif::{ProgressBar, ProgressStyle};
 use rstar::{primitives::GeomWithData, RTree, RTreeObject};
@@ -20,7 +21,7 @@ fn main() -> Result<()> {
     }
 
     let boundaries = read_boundaries("inputs/boundaries.geojson")?;
-    let census_areas = read_census_areas("../data_prep/car_ownership/car_ownership.geojson")?;
+    let census_areas = read_census_areas("inputs/car_ownership.geojson")?;
     gpkg_to_geojson(
         &args[1],
         "web/public/summaries.geojson",
@@ -69,7 +70,13 @@ fn gpkg_to_geojson<
         });
         let ls: LineString = geo.try_into()?;
 
-        process(ls, input_feature, &mut boundaries, &mut census_areas, &mut pavements_writer)?;
+        process(
+            ls,
+            input_feature,
+            &mut boundaries,
+            &mut census_areas,
+            &mut pavements_writer,
+        )?;
     }
 
     // Write all boundaries with non-zero counts
@@ -96,11 +103,18 @@ fn gpkg_to_geojson<
 
         if params["aggregate_kerb_length"].is_some() {
             f.set_property("GEO_ID", obj.data);
-            f.set_property("number_of_cars_and_vans", params["number_of_cars_and_vans"].unwrap());
-            f.set_property("aggregate_kerb_length", params["aggregate_kerb_length"].unwrap());
+            f.set_property(
+                "number_of_cars_and_vans",
+                params["number_of_cars_and_vans"].unwrap(),
+            );
+            f.set_property(
+                "aggregate_kerb_length",
+                params["aggregate_kerb_length"].unwrap(),
+            );
             f.set_property(
                 "kerb_length_per_car",
-                params["aggregate_kerb_length"].unwrap() / params["number_of_cars_and_vans"].unwrap()
+                params["aggregate_kerb_length"].unwrap()
+                    / params["number_of_cars_and_vans"].unwrap(),
             );
             oa_writer.write_feature(&f)?;
         }
@@ -164,8 +178,8 @@ fn process_feature(
         average_rating_exc_pavements
     };
 
-    let (output_area_geoid, parkable_length ) = aggregate_kerb_length_per_oa(
-        census_areas, &geom, &average_rating_exc_pavements, &class)?;
+    let (output_area_geoid, parkable_length) =
+        aggregate_kerb_length_per_oa(census_areas, &geom, &average_rating_exc_pavements, &class)?;
 
     // Find all matching boundaries
     for obj in boundaries
@@ -244,7 +258,7 @@ fn parkable_kerb_length(geom: &LineString, rating: &str, class: &str) -> f64 {
 
     let raw_length = geom.geodesic_length();
 
-    let kerb_length = match rating{
+    let kerb_length = match rating {
         // If the road is wide enough, assume that both sides are parkable
         "green" => 2.0 * raw_length,
         "amber" => raw_length,
@@ -253,7 +267,6 @@ fn parkable_kerb_length(geom: &LineString, rating: &str, class: &str) -> f64 {
             "B Road" | "Classified Unnumbered" | "Unclassified" => raw_length,
             "Unknown" | "Not Classified" => raw_length,
             _ => panic!("Unknown class {class}"),
-            
         },
         "TODO" => raw_length,
         _ => panic!("Unknown rating {rating}"),
@@ -277,7 +290,7 @@ fn aggregate_kerb_length_per_oa(
     // For each output area, sum the kerb length where it is possible to park a car.
     // Calculate the parkable kerb length per car in the area.
     // Returns the GEOID of the census area each road is assigned to
-    // Updates the census_areas with the kerb length per assigned road segment 
+    // Updates the census_areas with the kerb length per assigned road segment
 
     // Estimate the length of the kerb where it is possible to park a car
     let parkable_length = parkable_kerb_length(geom, average_rating, road_class);
@@ -308,27 +321,29 @@ fn aggregate_kerb_length_per_oa(
 
     if target_geoid.is_some() {
         let sub_params = census_area.params.get_mut(target_geoid.unwrap()).unwrap();
-    
+
         sub_params.insert(
             "aggregate_kerb_length".to_string(),
             Some(sub_params["aggregate_kerb_length"].unwrap_or(0.0) + parkable_length),
         );
     }
 
-    Ok((target_geoid.unwrap_or(&String::from("NONE")).clone(), parkable_length))
+    Ok((
+        target_geoid.unwrap_or(&String::from("NONE")).clone(),
+        parkable_length,
+    ))
 }
-
 
 struct Boundaries {
     rtree: RTree<GeomWithData<Polygon, String>>,
     // Per boundary name, the count for [red, amber, green]
-    counts: HashMap<String, [usize; 4]>
+    counts: HashMap<String, [usize; 4]>,
 }
 
 struct CensusAreas {
     rtree: RTree<GeomWithData<Polygon, String>>,
     // Per boundary name, the count for [red, amber, green]
-    params: HashMap<String, HashMap<String, Option<f64>>>
+    params: HashMap<String, HashMap<String, Option<f64>>>,
 }
 
 fn read_boundaries(path: &str) -> Result<Boundaries> {
@@ -353,9 +368,8 @@ fn read_boundaries(path: &str) -> Result<Boundaries> {
     }
     let rtree = RTree::bulk_load(boundaries);
 
-    Ok(Boundaries { rtree, counts})
+    Ok(Boundaries { rtree, counts })
 }
-
 
 fn read_census_areas(path: &str) -> Result<CensusAreas> {
     // Read the census areas and their populations
@@ -380,9 +394,12 @@ fn read_census_areas(path: &str) -> Result<CensusAreas> {
         for polygon in mp {
             output_areas.push(GeomWithData::new(polygon, name.clone()));
         }
-        
+
         let sub_params = HashMap::from([
-            ("number_of_cars_and_vans".to_string(), number_of_cars_and_vans),
+            (
+                "number_of_cars_and_vans".to_string(),
+                number_of_cars_and_vans,
+            ),
             ("aggregate_kerb_length".to_string(), None::<f64>),
             // ("kerb_length_per_car".to_string(), None::<f64>),
         ]);
@@ -391,6 +408,5 @@ fn read_census_areas(path: &str) -> Result<CensusAreas> {
     }
     let rtree = RTree::bulk_load(output_areas);
 
-    Ok(CensusAreas { rtree, params})
+    Ok(CensusAreas { rtree, params })
 }
-
