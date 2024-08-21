@@ -1,8 +1,10 @@
 #!/bin/bash
 
-# Requires popgetter
+# Requires popgetter and ogr2ogr
 # But doesn't worry about how to get popgetter
 
+set -e
+set -x
 mkdir -p inputs
 cd inputs
 
@@ -25,7 +27,7 @@ popgetter data \
     --force-run \
     --bbox 418370,553902,434445,573095
 
-mapshaper car_ownership_epsg27000.geojson \
-        -rename-fields number_of_cars_and_vans="Number of cars or vans: Total: All households" \
-        -proj init=EPSG:27700 crs=wgs84 \
-        -o inputs/car_ownership.geojson
+ogr2ogr -f GPKG car_ownership.gpkg \
+        -s_srs EPSG:27700 \
+        -t_srs EPSG:4326 \
+        car_ownership_epsg27000.geojson

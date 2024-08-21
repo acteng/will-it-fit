@@ -6,8 +6,8 @@ use fs_err::File;
 use gdal::vector::LayerAccess;
 use gdal::Dataset;
 use geo::{
-    Contains, Coord, GeodesicLength, Intersects, LineString, MapCoordsInPlace, MultiPolygon,
-    Polygon,
+    Contains, Coord, GeodesicLength, Geometry, Intersects, LineString, MapCoordsInPlace,
+    MultiPolygon, Polygon,
 };
 use geojson::{FeatureCollection, FeatureWriter};
 use indicatif::{ProgressBar, ProgressStyle};
@@ -21,7 +21,7 @@ fn main() -> Result<()> {
     }
 
     let boundaries = read_boundaries("inputs/boundaries.geojson")?;
-    let census_areas = read_census_areas("inputs/car_ownership.geojson")?;
+    let census_areas = read_census_areas("inputs/car_ownership.gpkg")?;
     gpkg_to_geojson(
         &args[1],
         "web/public/summaries.geojson",
@@ -252,6 +252,7 @@ fn parkable_kerb_length(geom: &LineString, rating: &str, class: &str) -> f64 {
     // This attempts to implement the table of proposed interventions in
     // the Pavement Parking Assessment Document
 
+    // TODO Haversine?
     let raw_length = geom.geodesic_length();
 
     let kerb_length = match rating {
@@ -357,26 +358,33 @@ fn read_boundaries(path: &str) -> Result<Boundaries> {
 
 fn read_census_areas(path: &str) -> Result<CensusAreas> {
     println!("Reading census areas from {path}");
-    // TODO Convert to gpkg or something faster to read
-    let gj: FeatureCollection = fs_err::read_to_string(path)?.parse()?;
+
+    let dataset = Dataset::open(path)?;
+    // Assume only one layer
+    let mut layer = dataset.layer(0)?;
+
+    let progress = ProgressBar::new(layer.feature_count()).with_style(ProgressStyle::with_template(
+        "[{elapsed_precise}] [{wide_bar:.cyan/blue}] {human_pos}/{human_len} ({per_sec}, {eta})").unwrap());
     let mut output_areas = Vec::new();
     let mut info = HashMap::new();
-    for f in gj.features {
-        let name = f.property("GEO_ID").unwrap().as_str().unwrap().to_string();
-        let number_of_cars_and_vans = f
-            .property("number_of_cars_and_vans")
-            .unwrap()
-            .as_f64()
-            .unwrap();
 
-        let mp: MultiPolygon = if matches!(
-            f.geometry.as_ref().unwrap().value,
-            geojson::Value::Polygon(_)
-        ) {
-            MultiPolygon(vec![f.try_into()?])
-        } else {
-            f.try_into()?
+    for input_feature in layer.features() {
+        progress.inc(1);
+        let geo = input_feature.geometry().unwrap().to_geo()?;
+        let mp = match geo {
+            Geometry::Polygon(p) => MultiPolygon(vec![p]),
+            Geometry::MultiPolygon(mp) => mp,
+            _ => bail!("Unexpected geometry type"),
         };
+        let Some(name) = input_feature.field_as_string_by_name("GEO_ID")? else {
+            bail!("Missing GEO_ID");
+        };
+        let Some(number_of_cars_and_vans) = input_feature
+            .field_as_double_by_name("Number of cars or vans: Total: All households")?
+        else {
+            bail!("Missing number_of_cars_and_vans");
+        };
+
         // MultiPolygon isn't supported, so just insert multiple names
         for polygon in mp {
             output_areas.push(GeomWithData::new(polygon, name.clone()));
