@@ -10,7 +10,7 @@ use geojson::{Feature, FeatureWriter, Value};
 use indicatif::{ProgressBar, ProgressStyle};
 use rstar::{primitives::GeomWithData, RTree, RTreeObject};
 
-use crate::Class;
+use crate::{Class, Rating};
 
 pub struct CensusAreas {
     rtree: RTree<GeomWithData<Polygon, String>>,
@@ -77,7 +77,7 @@ impl CensusAreas {
     pub fn aggregate_kerb_length_per_oa(
         &mut self,
         geom: &LineString,
-        average_rating: &str,
+        average_rating: Rating,
         class: Class,
     ) -> Result<(Option<String>, f64)> {
         // For each output area, sum the kerb length where it is possible to park a car.
@@ -124,7 +124,7 @@ impl CensusAreas {
     }
 }
 
-fn parkable_kerb_length(geom: &LineString, rating: &str, class: Class) -> f64 {
+fn parkable_kerb_length(geom: &LineString, rating: Rating, class: Class) -> f64 {
     // Returns the length of the kerb where it is possible to park a car
     // i.e. not on a junction or a pedestrian crossing, etc.
     // This attempts to implement the table of proposed interventions in
@@ -135,14 +135,12 @@ fn parkable_kerb_length(geom: &LineString, rating: &str, class: Class) -> f64 {
 
     let kerb_length = match rating {
         // If the road is wide enough, assume that both sides are parkable
-        "green" => 2.0 * raw_length,
-        "amber" => raw_length,
-        "red" => match class {
+        Rating::Green => 2.0 * raw_length,
+        Rating::Amber => raw_length,
+        Rating::Red => match class {
             Class::A => 0.0,
             Class::B | Class::C | Class::Unclassified => raw_length,
         },
-        "TODO" => raw_length,
-        _ => panic!("Unknown rating {rating}"),
     };
 
     // TODO - additional considerations:
