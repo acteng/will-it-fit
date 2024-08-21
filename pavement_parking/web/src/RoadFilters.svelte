@@ -3,14 +3,7 @@
 
   export let filters: Filters;
 
-  let classes = [
-    "A Road",
-    "B Road",
-    "Classified Unnumbered",
-    "Unclassified",
-    "Unknown",
-    "Not Classified",
-  ] as const;
+  let classes = ["A", "B", "C", "Unclassified"] as const;
 </script>
 
 <fieldset>

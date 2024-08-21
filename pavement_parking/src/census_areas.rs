@@ -10,6 +10,8 @@ use geojson::{Feature, FeatureWriter, Value};
 use indicatif::{ProgressBar, ProgressStyle};
 use rstar::{primitives::GeomWithData, RTree, RTreeObject};
 
+use crate::Class;
+
 pub struct CensusAreas {
     rtree: RTree<GeomWithData<Polygon, String>>,
     info: HashMap<String, CensusArea>,
@@ -76,13 +78,13 @@ impl CensusAreas {
         &mut self,
         geom: &LineString,
         average_rating: &str,
-        road_class: &str,
+        class: Class,
     ) -> Result<(Option<String>, f64)> {
         // For each output area, sum the kerb length where it is possible to park a car.
         // Calculate the parkable kerb length per car in the area.
 
         // Estimate the length of the kerb where it is possible to park a car
-        let parkable_length = parkable_kerb_length(geom, average_rating, road_class);
+        let parkable_length = parkable_kerb_length(geom, average_rating, class);
 
         // Assign each road to exactly one output area. If it intersects multiple output areas,
         // it can be assigned by arbitrary but repeatable method.
@@ -122,7 +124,7 @@ impl CensusAreas {
     }
 }
 
-fn parkable_kerb_length(geom: &LineString, rating: &str, class: &str) -> f64 {
+fn parkable_kerb_length(geom: &LineString, rating: &str, class: Class) -> f64 {
     // Returns the length of the kerb where it is possible to park a car
     // i.e. not on a junction or a pedestrian crossing, etc.
     // This attempts to implement the table of proposed interventions in
@@ -136,10 +138,8 @@ fn parkable_kerb_length(geom: &LineString, rating: &str, class: &str) -> f64 {
         "green" => 2.0 * raw_length,
         "amber" => raw_length,
         "red" => match class {
-            "A Road" => 0.0,
-            "B Road" | "Classified Unnumbered" | "Unclassified" => raw_length,
-            "Unknown" | "Not Classified" => raw_length,
-            _ => panic!("Unknown class {class}"),
+            Class::A => 0.0,
+            Class::B | Class::C | Class::Unclassified => raw_length,
         },
         "TODO" => raw_length,
         _ => panic!("Unknown rating {rating}"),

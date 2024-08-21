@@ -5,7 +5,7 @@
   import type { ExpressionSpecification } from "maplibre-gl";
 
   export let show: Mode;
-  export let streetFilters: Filters;
+  export let roadFilters: Filters;
   export let sourceLayer: string | undefined;
 
   function makeFilter(f: Filters): ExpressionSpecification {
@@ -30,13 +30,13 @@
 
 <LineLayer
   {sourceLayer}
-  filter={makeFilter(streetFilters)}
-  layout={{ visibility: show == "streets" ? "visible" : "none" }}
+  filter={makeFilter(roadFilters)}
+  layout={{ visibility: show == "roads" ? "visible" : "none" }}
   manageHoverState
   paint={{
     "line-width": hoverStateFilter(5, 10),
     "line-color": constructMatchExpression(
-      ["get", streetFilters.useRating],
+      ["get", roadFilters.useRating],
       {
         green: colors.green,
         amber: colors.amber,
@@ -50,7 +50,7 @@
 >
   <Popup openOn="hover" let:data popupClass="popup">
     {#if data?.properties}
-      <h1>{data.properties.class} street</h1>
+      <h1>{data.properties.class} road</h1>
       <p>Direction: {data.properties.direction}</p>
       <p>
         Average road width {data.properties.average_width}, rating {data

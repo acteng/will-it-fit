@@ -3,7 +3,7 @@ use geo::{Coord, LineString, MapCoordsInPlace};
 
 pub struct Road {
     pub geom: LineString,
-    pub class: String,
+    pub class: Class,
     pub road_average: f64,
     pub road_minimum: f64,
     /// Assume that where there are pavements on both sides of the road, then this value is the sum
@@ -12,16 +12,32 @@ pub struct Road {
     pub direction: String,
 }
 
+#[derive(Clone, Copy, Debug)]
+pub enum Class {
+    A,
+    B,
+    C,
+    Unclassified,
+}
+
 impl Road {
     /// Parse data about one road from the input gpkg. `None` means to skip this road.
     pub fn new(input: gdal::vector::Feature) -> Result<Option<Self>> {
         let Some(class) = input.field_as_string_by_name("roadclassification")? else {
             bail!("Missing roadclassification");
         };
-        // Skip roads that shouldn't be analyzed for pavement parking
-        if class == "Motorway" {
-            return Ok(None);
-        }
+        let class = match class.as_str() {
+            "A Road" => Class::A,
+            "B Road" => Class::B,
+            "Classified Unnumbered" => Class::C,
+            "Unclassified" => Class::Unclassified,
+
+            // Skip roads that shouldn't be analyzed for pavement parking
+            "Motorway" | "Unknown" | "Not Classified" => {
+                return Ok(None);
+            }
+            _ => bail!("Unknown roadclassification {class}"),
+        };
 
         let mut geom: LineString = input.geometry().unwrap().to_geo()?.try_into()?;
         // Remove unnecessary precision
