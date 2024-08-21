@@ -27,24 +27,24 @@
       </tr>
       <tr>
         <th style:color={colors.green}>Green</th>
-        <td>&ge; 11.8m</td>
-        <td>&ge; 11.8m</td>
-        <td>&ge; 9m</td>
-        <td>&ge; 9m</td>
+        <td>&ge; ???</td>
+        <td>&ge; 12.8m</td>
+        <td>&ge; 10.0m</td>
+        <td>&ge; 9.5m</td>
       </tr>
       <tr>
         <th style:color={colors.amber}>Amber</th>
-        <td>10.4m - 11.8m</td>
-        <td>10.4m - 11.8m</td>
-        <td>7.5m - 9m</td>
-        <td>7.5m - 9m</td>
+        <td>???m - ???</td>
+        <td>11.5m - 12.8m</td>
+        <td>9.1m - 10.0m</td>
+        <td>8.4m - 9.5m</td>
       </tr>
       <tr>
         <th style:color={colors.red}>Red</th>
-        <td>&lt; 10.4m</td>
-        <td>&lt; 10.4m</td>
-        <td>&lt; 7.5m</td>
-        <td>&lt; 7.5m</td>
+        <td>&lt; ???</td>
+        <td>&lt; 11.5m</td>
+        <td>&lt; 9.1m</td>
+        <td>&lt; 8.4m</td>
       </tr>
     </table>
 
