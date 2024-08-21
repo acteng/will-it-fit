@@ -14,13 +14,13 @@
   import StreetFilters from "./StreetFilters.svelte";
   import OutputAreas from "./OutputAreas.svelte";
   import About from "./About.svelte";
-  import { defaultFilters } from "./types";
+  import { defaultFilters, type Mode } from "./types";
 
   let bounds = window.location.hash
     ? undefined
     : ([-5.96, 49.89, 2.31, 55.94] as LngLatBoundsLike);
 
-  let show: "streets" | "lad-summary" | "ca-summary" | "census-area" = "streets";
+  let show: Mode = "streets";
   let streetFilters = defaultFilters;
 
   let params = new URLSearchParams(window.location.search);
@@ -37,7 +37,6 @@
       : "pavements.pmtiles",
     "output_areas.geojson",
   );
-
 
   let map: Map;
   let zoom = 0;
@@ -106,13 +105,8 @@
           </VectorTileSource>
         {/if}
 
-        {#if show == "census-area"}
-          <OutputAreas {show} url={censusUrl} />
-        {:else}
-          <SummaryLayers {show} url={summaryUrl} />
-        {/if}
-        <!-- <OutputAreasLayers {show} url={censusUrl} />
-        <SummaryLayers {show} url={summaryUrl} /> -->
+        <SummaryLayers {show} url={summaryUrl} />
+        <OutputAreas {show} url={censusUrl} />
       </MapLibre>
     </div>
   </Layout>

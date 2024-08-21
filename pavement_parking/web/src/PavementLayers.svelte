@@ -1,10 +1,10 @@
 <script lang="ts">
   import { constructMatchExpression } from "svelte-utils/map";
   import { LineLayer, Popup, hoverStateFilter } from "svelte-maplibre";
-  import { colors, type Filters } from "./types";
+  import { colors, type Mode, type Filters } from "./types";
   import type { ExpressionSpecification } from "maplibre-gl";
 
-  export let show: "streets" | "lad-summary" | "ca-summary";
+  export let show: Mode;
   export let streetFilters: Filters;
   export let sourceLayer: string | undefined;
 

@@ -1,3 +1,5 @@
+export type Mode = "streets" | "lad-summary" | "ca-summary" | "census-area";
+
 export interface Filters {
   useRating: "average_rating" | "rating_change" | "minimum_rating";
   showRatings: {

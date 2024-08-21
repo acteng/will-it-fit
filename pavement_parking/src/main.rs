@@ -50,6 +50,7 @@ fn gpkg_to_geojson<
     mut boundaries: Boundaries,
     mut census_areas: CensusAreas,
 ) -> Result<()> {
+    println!("Processing {input_path}");
     let dataset = Dataset::open(input_path)?;
     // Assume only one layer
     let mut layer = dataset.layer(0)?;
@@ -94,27 +95,19 @@ fn gpkg_to_geojson<
         }
     }
 
-    // Write all output_areas with non-zero counts
+    // Write all output_areas with non-zero kerb length
     let mut oa_writer =
         FeatureWriter::from_writer(BufWriter::new(File::create(output_areas_output_path)?));
     for obj in census_areas.rtree.drain() {
-        let mut f = geojson::Feature::from(geojson::Value::from(obj.geom()));
-        let params = &census_areas.params[&obj.data];
-
-        if params["aggregate_kerb_length"].is_some() {
+        let info = &census_areas.info[&obj.data];
+        if info.aggregate_kerb_length > 0.0 {
+            let mut f = geojson::Feature::from(geojson::Value::from(obj.geom()));
             f.set_property("GEO_ID", obj.data);
-            f.set_property(
-                "number_of_cars_and_vans",
-                params["number_of_cars_and_vans"].unwrap(),
-            );
-            f.set_property(
-                "aggregate_kerb_length",
-                params["aggregate_kerb_length"].unwrap(),
-            );
+            f.set_property("number_of_cars_and_vans", info.number_of_cars_and_vans);
+            f.set_property("aggregate_kerb_length", info.aggregate_kerb_length);
             f.set_property(
                 "kerb_length_per_car",
-                params["aggregate_kerb_length"].unwrap()
-                    / params["number_of_cars_and_vans"].unwrap(),
+                info.aggregate_kerb_length / info.number_of_cars_and_vans,
             );
             oa_writer.write_feature(&f)?;
         }
@@ -212,7 +205,10 @@ fn process_feature(
     output_line.set_property("average_rating_inc_pavements", average_rating_inc_pavements);
     output_line.set_property("minimum_rating", minimum_rating);
     output_line.set_property("parkable_length", parkable_length);
-    output_line.set_property("output_area_geoid", output_area_geoid.as_str());
+    output_line.set_property(
+        "output_area_geoid",
+        output_area_geoid.unwrap_or("NONE".to_string()),
+    );
     output_line.set_property("rating_change", rating_change);
     output_line.set_property("class", class);
     output_line.set_property("direction", direction);
@@ -281,16 +277,16 @@ fn parkable_kerb_length(geom: &LineString, rating: &str, class: &str) -> f64 {
     kerb_length
 }
 
+// Returns the GEOID of the census area the road is assigned to, and the parkable length. Also
+// updates the census_areas with the kerb length per assigned road segment
 fn aggregate_kerb_length_per_oa(
     census_area: &mut CensusAreas,
     geom: &LineString,
     average_rating: &str,
     road_class: &str,
-) -> Result<(String, f64)> {
+) -> Result<(Option<String>, f64)> {
     // For each output area, sum the kerb length where it is possible to park a car.
     // Calculate the parkable kerb length per car in the area.
-    // Returns the GEOID of the census area each road is assigned to
-    // Updates the census_areas with the kerb length per assigned road segment
 
     // Estimate the length of the kerb where it is possible to park a car
     let parkable_length = parkable_kerb_length(geom, average_rating, road_class);
@@ -299,39 +295,21 @@ fn aggregate_kerb_length_per_oa(
     // it can be assigned by arbitrary but repeatable method.
     // For reproducibility, find all of the of the output areas which intersect the road segment
     // Then select the one with the alphabetically first GEOID.
-    let mut target_geoid = None::<&String>;
-    for oa in census_area
+    let target_geoid = census_area
         .rtree
         .locate_in_envelope_intersecting_mut(&geom.envelope())
-    {
-        if oa.geom().intersects(geom) {
-            let next_geoid = &oa.data;
-            target_geoid = match target_geoid {
-                None => Some(next_geoid),
-                Some(ref current) => {
-                    if next_geoid < *current {
-                        Some(next_geoid)
-                    } else {
-                        target_geoid
-                    }
-                }
-            }
-        }
+        .filter(|oa| oa.geom().intersects(geom))
+        .map(|oa| oa.data.clone())
+        .min();
+    if let Some(ref geoid) = target_geoid {
+        census_area
+            .info
+            .get_mut(geoid)
+            .unwrap()
+            .aggregate_kerb_length += parkable_length;
     }
 
-    if target_geoid.is_some() {
-        let sub_params = census_area.params.get_mut(target_geoid.unwrap()).unwrap();
-
-        sub_params.insert(
-            "aggregate_kerb_length".to_string(),
-            Some(sub_params["aggregate_kerb_length"].unwrap_or(0.0) + parkable_length),
-        );
-    }
-
-    Ok((
-        target_geoid.unwrap_or(&String::from("NONE")).clone(),
-        parkable_length,
-    ))
+    Ok((target_geoid, parkable_length))
 }
 
 struct Boundaries {
@@ -342,11 +320,16 @@ struct Boundaries {
 
 struct CensusAreas {
     rtree: RTree<GeomWithData<Polygon, String>>,
-    // Per boundary name, the count for [red, amber, green]
-    params: HashMap<String, HashMap<String, Option<f64>>>,
+    info: HashMap<String, CensusArea>,
+}
+
+struct CensusArea {
+    number_of_cars_and_vans: f64,
+    aggregate_kerb_length: f64,
 }
 
 fn read_boundaries(path: &str) -> Result<Boundaries> {
+    println!("Reading boundaries from {path}");
     let gj: FeatureCollection = fs_err::read_to_string(path)?.parse()?;
     let mut boundaries = Vec::new();
     let mut counts = HashMap::new();
@@ -366,21 +349,25 @@ fn read_boundaries(path: &str) -> Result<Boundaries> {
         }
         counts.insert(name, [0, 0, 0, 0]);
     }
+    println!("Building RTree of {} boundaries", boundaries.len());
     let rtree = RTree::bulk_load(boundaries);
 
     Ok(Boundaries { rtree, counts })
 }
 
 fn read_census_areas(path: &str) -> Result<CensusAreas> {
-    // Read the census areas and their populations
-
+    println!("Reading census areas from {path}");
+    // TODO Convert to gpkg or something faster to read
     let gj: FeatureCollection = fs_err::read_to_string(path)?.parse()?;
     let mut output_areas = Vec::new();
-    let mut params = HashMap::new();
+    let mut info = HashMap::new();
     for f in gj.features {
-        // dbg!(&f);
         let name = f.property("GEO_ID").unwrap().as_str().unwrap().to_string();
-        let number_of_cars_and_vans = f.property("number_of_cars_and_vans").unwrap().as_f64();
+        let number_of_cars_and_vans = f
+            .property("number_of_cars_and_vans")
+            .unwrap()
+            .as_f64()
+            .unwrap();
 
         let mp: MultiPolygon = if matches!(
             f.geometry.as_ref().unwrap().value,
@@ -395,18 +382,16 @@ fn read_census_areas(path: &str) -> Result<CensusAreas> {
             output_areas.push(GeomWithData::new(polygon, name.clone()));
         }
 
-        let sub_params = HashMap::from([
-            (
-                "number_of_cars_and_vans".to_string(),
+        info.insert(
+            name,
+            CensusArea {
                 number_of_cars_and_vans,
-            ),
-            ("aggregate_kerb_length".to_string(), None::<f64>),
-            // ("kerb_length_per_car".to_string(), None::<f64>),
-        ]);
-
-        params.insert(name, sub_params);
+                aggregate_kerb_length: 0.0,
+            },
+        );
     }
+    println!("Building RTree of {} output areas", output_areas.len());
     let rtree = RTree::bulk_load(output_areas);
 
-    Ok(CensusAreas { rtree, params })
+    Ok(CensusAreas { rtree, info })
 }
