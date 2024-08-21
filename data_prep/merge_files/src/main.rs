@@ -9,7 +9,8 @@ use geozero::GeozeroDatasource;
 /// This just converts a bunch of GeoJSON files into one flatgeobuffer file. ogr2ogr doesn't
 /// reasonably handle multiple input files.
 fn main() -> Result<()> {
-    let mut fgb = FgbWriter::create("obstacles", GeometryType::Polygon)?;
+    // Use Unknown to handle both polygons and multipolygons
+    let mut fgb = FgbWriter::create("obstacles", GeometryType::Unknown)?;
 
     let paths: Vec<_> = std::env::args().skip(1).collect();
     for (idx, path) in paths.iter().enumerate() {
