@@ -9,10 +9,12 @@ use indicatif::{ProgressBar, ProgressStyle};
 
 use crate::boundaries::Boundaries;
 use crate::census_areas::CensusAreas;
+use crate::ratings::Rating;
 use crate::roads::{Class, Road};
 
 mod boundaries;
 mod census_areas;
+mod ratings;
 mod roads;
 
 fn main() -> Result<()> {
@@ -68,19 +70,19 @@ fn handle_road(
     };
 
     let average_rating_inc_pavements =
-        rating(road.class, road.road_average + road.pavement_average)?;
-    let average_rating_exc_pavements = rating(road.class, road.road_average)?;
-    let minimum_rating = rating(road.class, road.road_minimum)?;
+        Rating::new(road.class, road.road_average + road.pavement_average);
+    let average_rating_exc_pavements = Rating::new(road.class, road.road_average);
+    let minimum_rating = Rating::new(road.class, road.road_minimum);
 
     let rating_change = if average_rating_inc_pavements == average_rating_exc_pavements {
         "no_change"
     } else {
-        average_rating_exc_pavements
+        average_rating_exc_pavements.to_str()
     };
 
     let (output_area_geoid, parkable_length) = census_areas.aggregate_kerb_length_per_oa(
         &road.geom,
-        &average_rating_exc_pavements,
+        average_rating_exc_pavements,
         road.class,
     )?;
 
@@ -92,9 +94,12 @@ fn handle_road(
     output_line.set_property("average_width", road.road_average);
     output_line.set_property("minimum_width", road.road_minimum);
     output_line.set_property("pavement_average_width", road.pavement_average);
-    output_line.set_property("average_rating", average_rating_exc_pavements);
-    output_line.set_property("average_rating_inc_pavements", average_rating_inc_pavements);
-    output_line.set_property("minimum_rating", minimum_rating);
+    output_line.set_property("average_rating", average_rating_exc_pavements.to_str());
+    output_line.set_property(
+        "average_rating_inc_pavements",
+        average_rating_inc_pavements.to_str(),
+    );
+    output_line.set_property("minimum_rating", minimum_rating.to_str());
     output_line.set_property("parkable_length", parkable_length);
     output_line.set_property(
         "output_area_geoid",
@@ -106,27 +111,4 @@ fn handle_road(
     writer.write_feature(&output_line)?;
 
     Ok(())
-}
-
-fn rating(class: Class, width: f64) -> Result<&'static str> {
-    // See https://www.ordnancesurvey.co.uk/documents/os-open-roads-user-guide.pdf page 22 for the
-    // cases. The width thresholds come from a TBD table.
-    match class {
-        Class::A | Class::B => Ok(if width >= 11.8 {
-            "green"
-        } else if width >= 10.4 {
-            "amber"
-        } else {
-            "red"
-        }),
-
-        Class::C | Class::Unclassified => Ok(if width >= 9.0 {
-            "green"
-        } else if width >= 7.5 {
-            "amber"
-        } else {
-            // TODO Table doesn't handle [7, 7.5]
-            "red"
-        }),
-    }
 }

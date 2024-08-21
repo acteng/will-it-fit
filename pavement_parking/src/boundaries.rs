@@ -7,11 +7,13 @@ use geo::{Contains, LineString, MultiPolygon, Polygon};
 use geojson::{Feature, FeatureCollection, FeatureWriter, Value};
 use rstar::{primitives::GeomWithData, RTree, RTreeObject};
 
+use crate::Rating;
+
 /// Aggregate counts per LAD and CA boundaries
 pub struct Boundaries {
     rtree: RTree<GeomWithData<Polygon, String>>,
     // Per boundary name, the count for [red, amber, green]
-    counts: HashMap<String, [usize; 4]>,
+    counts: HashMap<String, [usize; 3]>,
 }
 
 impl Boundaries {
@@ -32,7 +34,7 @@ impl Boundaries {
             for polygon in mp {
                 boundaries.push(GeomWithData::new(polygon, name.clone()));
             }
-            counts.insert(name, [0, 0, 0, 0]);
+            counts.insert(name, [0, 0, 0]);
         }
         println!("Building RTree of {} boundaries", boundaries.len());
         let rtree = RTree::bulk_load(boundaries);
@@ -41,22 +43,17 @@ impl Boundaries {
         Ok(Self { rtree, counts })
     }
 
-    pub fn handle_road(&mut self, geom: &LineString, rating: &str) {
+    pub fn handle_road(&mut self, geom: &LineString, rating: Rating) {
         // Find all matching boundaries
         for obj in self.rtree.locate_in_envelope_intersecting(&geom.envelope()) {
             // TODO Or even just intersects, to handle boundaries?
             if obj.geom().contains(geom) {
-                let count = self.counts.get_mut(&obj.data).unwrap();
-                if rating == "red" {
-                    count[0] += 1;
-                } else if rating == "amber" {
-                    count[1] += 1;
-                } else if rating == "green" {
-                    count[2] += 1;
-                } else {
-                    // No change in rating
-                    count[3] += 1;
-                }
+                let idx = match rating {
+                    Rating::Red => 0,
+                    Rating::Amber => 1,
+                    Rating::Green => 2,
+                };
+                self.counts.get_mut(&obj.data).unwrap()[idx] += 1;
             }
         }
     }
