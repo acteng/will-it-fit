@@ -11,7 +11,7 @@
   } from "svelte-maplibre";
   import PavementLayers from "./PavementLayers.svelte";
   import SummaryLayers from "./SummaryLayers.svelte";
-  import StreetFilters from "./StreetFilters.svelte";
+  import RoadFilters from "./RoadFilters.svelte";
   import OutputAreas from "./OutputAreas.svelte";
   import About from "./About.svelte";
   import { defaultFilters, type Mode } from "./types";
@@ -20,8 +20,8 @@
     ? undefined
     : ([-5.96, 49.89, 2.31, 55.94] as LngLatBoundsLike);
 
-  let show: Mode = "streets";
-  let streetFilters = defaultFilters;
+  let show: Mode = "roads";
+  let roadFilters = defaultFilters;
 
   let params = new URLSearchParams(window.location.search);
   let pavementsUrl = params.get("data") || "";
@@ -60,8 +60,8 @@
       <fieldset>
         <legend>Show:</legend>
         <label>
-          <input type="radio" value="streets" bind:group={show} />
-          Streets
+          <input type="radio" value="roads" bind:group={show} />
+          Roads
         </label>
         <label>
           <input type="radio" value="lad-summary" bind:group={show} />
@@ -77,11 +77,11 @@
         </label>
       </fieldset>
 
-      {#if show == "streets"}
+      {#if show == "roads"}
         {#if zoom >= 10}
-          <StreetFilters bind:filters={streetFilters} />
+          <RoadFilters bind:filters={roadFilters} />
         {:else}
-          <p>Zoom in more to see streets</p>
+          <p>Zoom in more to see roads</p>
         {/if}
       {/if}
     </div>
@@ -97,11 +97,11 @@
 
         {#if pavementsUrl.endsWith(".geojson")}
           <GeoJSON data={pavementsUrl} generateId>
-            <PavementLayers {show} {streetFilters} sourceLayer={undefined} />
+            <PavementLayers {show} {roadFilters} sourceLayer={undefined} />
           </GeoJSON>
         {:else if pavementsUrl.endsWith(".pmtiles")}
           <VectorTileSource url={`pmtiles://${pavementsUrl}`}>
-            <PavementLayers {show} {streetFilters} sourceLayer="pavements" />
+            <PavementLayers {show} {roadFilters} sourceLayer="pavements" />
           </VectorTileSource>
         {/if}
 

@@ -1,4 +1,4 @@
-export type Mode = "streets" | "lad-summary" | "ca-summary" | "census-area";
+export type Mode = "roads" | "lad-summary" | "ca-summary" | "census-area";
 
 export interface Filters {
   useRating: "average_rating" | "rating_change" | "minimum_rating";
@@ -9,12 +9,10 @@ export interface Filters {
     no_change: boolean;
   };
   showClasses: {
-    "A Road": boolean;
-    "B Road": boolean;
-    "Classified Unnumbered": boolean;
+    A: boolean;
+    B: boolean;
+    C: boolean;
     Unclassified: boolean;
-    Unknown: boolean;
-    "Not Classified": boolean;
   };
   showDirections: {
     both: boolean;
@@ -31,12 +29,10 @@ export const defaultFilters: Filters = {
     no_change: true,
   },
   showClasses: {
-    "A Road": true,
-    "B Road": true,
-    "Classified Unnumbered": true,
+    A: true,
+    B: true,
+    C: true,
     Unclassified: true,
-    Unknown: true,
-    "Not Classified": true,
   },
   showDirections: {
     both: true,

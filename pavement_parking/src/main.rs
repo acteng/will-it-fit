@@ -1,6 +1,6 @@
 use std::io::BufWriter;
 
-use anyhow::{bail, Result};
+use anyhow::Result;
 use fs_err::File;
 use gdal::vector::LayerAccess;
 use gdal::Dataset;
@@ -9,7 +9,7 @@ use indicatif::{ProgressBar, ProgressStyle};
 
 use crate::boundaries::Boundaries;
 use crate::census_areas::CensusAreas;
-use crate::roads::Road;
+use crate::roads::{Class, Road};
 
 mod boundaries;
 mod census_areas;
@@ -68,9 +68,9 @@ fn handle_road(
     };
 
     let average_rating_inc_pavements =
-        rating(&road.class, road.road_average + road.pavement_average)?;
-    let average_rating_exc_pavements = rating(&road.class, road.road_average)?;
-    let minimum_rating = rating(&road.class, road.road_minimum)?;
+        rating(road.class, road.road_average + road.pavement_average)?;
+    let average_rating_exc_pavements = rating(road.class, road.road_average)?;
+    let minimum_rating = rating(road.class, road.road_minimum)?;
 
     let rating_change = if average_rating_inc_pavements == average_rating_exc_pavements {
         "no_change"
@@ -81,7 +81,7 @@ fn handle_road(
     let (output_area_geoid, parkable_length) = census_areas.aggregate_kerb_length_per_oa(
         &road.geom,
         &average_rating_exc_pavements,
-        &road.class,
+        road.class,
     )?;
 
     // TODO Use average_rating_exc_pavements for now
@@ -101,18 +101,18 @@ fn handle_road(
         output_area_geoid.unwrap_or("NONE".to_string()),
     );
     output_line.set_property("rating_change", rating_change);
-    output_line.set_property("class", road.class);
+    output_line.set_property("class", format!("{:?}", road.class));
     output_line.set_property("direction", road.direction);
     writer.write_feature(&output_line)?;
 
     Ok(())
 }
 
-fn rating(class: &str, width: f64) -> Result<&'static str> {
+fn rating(class: Class, width: f64) -> Result<&'static str> {
     // See https://www.ordnancesurvey.co.uk/documents/os-open-roads-user-guide.pdf page 22 for the
     // cases. The width thresholds come from a TBD table.
     match class {
-        "A Road" | "B Road" => Ok(if width >= 11.8 {
+        Class::A | Class::B => Ok(if width >= 11.8 {
             "green"
         } else if width >= 10.4 {
             "amber"
@@ -120,8 +120,7 @@ fn rating(class: &str, width: f64) -> Result<&'static str> {
             "red"
         }),
 
-        // Note "Classified Unnumbered" is how OS calls C Roads
-        "Classified Unnumbered" | "Unclassified" => Ok(if width >= 9.0 {
+        Class::C | Class::Unclassified => Ok(if width >= 9.0 {
             "green"
         } else if width >= 7.5 {
             "amber"
@@ -129,10 +128,5 @@ fn rating(class: &str, width: f64) -> Result<&'static str> {
             // TODO Table doesn't handle [7, 7.5]
             "red"
         }),
-
-        // TODO Need to see what these are
-        "Unknown" | "Not Classified" => Ok("TODO"),
-
-        _ => bail!("Unknown roadclassification {class}"),
     }
 }
