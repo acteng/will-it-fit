@@ -7,9 +7,34 @@
     FillLayer,
   } from "svelte-maplibre";
   import type { Mode } from "./types";
+  import type { DataDrivenPropertyValueSpecification } from "maplibre-gl";
 
   export let show: Mode;
   export let url: string;
+
+  let fillColor = [
+    "let",
+    "kerb_length_per_car_js",
+    ["/", ["get", "aggregate_kerb_length"], ["get", "number_of_cars_and_vans"]],
+    [
+      "interpolate-hcl",
+      ["linear"],
+      ["var", "kerb_length_per_car_js"],
+      0,
+      ["to-color", "#ff0000"],
+      2.5,
+      ["to-color", "#ff1111"],
+      5,
+      ["to-color", "#ff2222"],
+      7.5,
+      ["to-color", "#ff4444"],
+      15,
+      ["to-color", "#ffdddd"],
+      20,
+      ["to-color", "#ffffff"],
+    ],
+  ] as unknown as DataDrivenPropertyValueSpecification<string>;
+  // TS gets confused by the maplibre expression, so typecast
 </script>
 
 <GeoJSON data={url} generateId>
@@ -17,32 +42,7 @@
     layout={{ visibility: show == "census-area" ? "visible" : "none" }}
     manageHoverState
     paint={{
-      "fill-color": [
-        "let",
-        "kerb_length_per_car_js",
-        [
-          "/",
-          ["get", "aggregate_kerb_length"],
-          ["get", "number_of_cars_and_vans"],
-        ],
-        [
-          "interpolate-hcl",
-          ["linear"],
-          ["var", "kerb_length_per_car_js"],
-          0,
-          ["to-color", "#ff0000"],
-          2.5,
-          ["to-color", "#ff1111"],
-          5,
-          ["to-color", "#ff2222"],
-          7.5,
-          ["to-color", "#ff4444"],
-          15,
-          ["to-color", "#ffdddd"],
-          20,
-          ["to-color", "#ffffff"],
-        ],
-      ],
+      "fill-color": fillColor,
       "fill-opacity": hoverStateFilter(0.6, 0.9),
     }}
     beforeId="Road numbers"
