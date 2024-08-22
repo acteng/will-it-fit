@@ -1,15 +1,19 @@
 use anyhow::{bail, Result};
-use geo::{Coord, LineString, MapCoordsInPlace};
+use geo::{Coord, HaversineLength, LineString, MapCoordsInPlace};
 
+// All distance units are in meters
 pub struct Road {
     pub geom: LineString,
+    pub length: f64,
+
     pub class: Class,
+    pub direction: String,
+
     pub road_average_width: f64,
     pub road_minimum_width: f64,
     /// Assume that where there are pavements on both sides of the road, then this value is the sum
     /// of both pavements. If there is only one pavement, then this value is the width of that.
     pub pavement_average_width: f64,
-    pub direction: String,
 }
 
 #[derive(Clone, Copy, Debug)]
@@ -45,6 +49,7 @@ impl Road {
             x: trim_f64(x),
             y: trim_f64(y),
         });
+        let length = geom.haversine_length();
 
         let Some(road_average_width) = input.field_as_double_by_name("roadwidth_average")? else {
             // Sometimes this really is missing
@@ -73,11 +78,14 @@ impl Road {
 
         Ok(Some(Self {
             geom,
+            length,
+
             class,
+            direction,
+
             road_average_width,
             road_minimum_width,
             pavement_average_width,
-            direction,
         }))
     }
 }

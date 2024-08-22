@@ -84,7 +84,7 @@ fn handle_road(
     let (output_area_geoid, parkable_length) =
         census_areas.aggregate_kerb_length_per_oa(&road.geom, rating_exc_pavements, road.class)?;
 
-    boundaries.handle_road(&road.geom, rating_exc_pavements);
+    boundaries.handle_road(&road, rating_exc_pavements);
 
     // Include the road in the output
     let mut output_line = geojson::Feature::from(geojson::Value::from(&road.geom));

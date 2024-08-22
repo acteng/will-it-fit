@@ -10,6 +10,8 @@
 
   export let show: Mode;
   export let url: string;
+
+  let ratings = ["red", "amber", "green"] as const;
 </script>
 
 <GeoJSON data={url} generateId>
@@ -30,15 +32,12 @@
     <Popup openOn="hover" let:data popupClass="popup">
       {#if data?.properties}
         <h1>{data.properties.name}</h1>
-        <p style:color={colors.red}>
-          Reds: {data.properties.red.toLocaleString()}
-        </p>
-        <p style:color={colors.amber}>
-          Ambers: {data.properties.amber.toLocaleString()}
-        </p>
-        <p style:color={colors.green}>
-          Greens: {data.properties.green.toLocaleString()}
-        </p>
+        {#each ratings as rating}
+          <p style:color={colors[rating]}>
+            {rating}: {data.properties[`${rating}_count`].toLocaleString()} roads,
+            {(data.properties[`${rating}_length`] / 1000).toFixed(2)} km
+          </p>
+        {/each}
       {/if}
     </Popup>
   </FillLayer>

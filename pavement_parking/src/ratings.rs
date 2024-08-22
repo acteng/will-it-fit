@@ -1,6 +1,8 @@
+use enum_map::Enum;
+
 use crate::Class;
 
-#[derive(Clone, Copy, PartialEq)]
+#[derive(Clone, Copy, PartialEq, Enum)]
 pub enum Rating {
     Red,
     Amber,
