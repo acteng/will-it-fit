@@ -10,6 +10,7 @@ pub struct Road {
     pub geom: LineString,
     pub length: f64,
 
+    pub name: String,
     pub class: Class,
     pub direction: String,
 
@@ -82,6 +83,10 @@ impl Road {
             x => bail!("Unknown directionality {x}"),
         };
 
+        let name = input
+            .field_as_string_by_name("name1_text")?
+            .unwrap_or_else(String::new);
+
         // TODO Only consider road width as input, or do we want to continue to also try with
         // pavement width?
         let ratings = EnumMap::from_fn(|scenario| Rating::new(scenario, class, road_average_width));
@@ -90,6 +95,7 @@ impl Road {
             geom,
             length,
 
+            name,
             class,
             direction,
 
@@ -105,6 +111,7 @@ impl Road {
         let mut f = Feature::from(Value::from(&self.geom));
         f.set_property("length", trim_meters(self.length));
 
+        f.set_property("name", self.name);
         f.set_property("class", format!("{:?}", self.class));
         f.set_property("direction", self.direction);
 

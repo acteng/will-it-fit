@@ -45,7 +45,8 @@
 >
   <Popup openOn="hover" let:data>
     {#if data?.properties}
-      <h1>{data.properties.class} road</h1>
+      <h1>{data.properties.name || "Unnamed road"}</h1>
+      <p>Class: {data.properties.class} road</p>
       <p>Direction: {data.properties.direction}</p>
       <p>Length: {data.properties.length} meters</p>
 
