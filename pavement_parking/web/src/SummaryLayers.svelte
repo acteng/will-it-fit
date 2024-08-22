@@ -6,12 +6,10 @@
     hoverStateFilter,
     FillLayer,
   } from "svelte-maplibre";
-  import { colors, type Mode } from "./types";
+  import { colors, scenarios, ratings, type Mode } from "./types";
 
   export let show: Mode;
   export let url: string;
-
-  let ratings = ["red", "amber", "green"] as const;
 </script>
 
 <GeoJSON data={url} generateId>
@@ -29,15 +27,32 @@
     }}
     beforeId="Road numbers"
   >
-    <Popup openOn="hover" let:data popupClass="popup">
+    <Popup openOn="hover" let:data>
       {#if data?.properties}
         <h1>{data.properties.name}</h1>
-        {#each ratings as rating}
-          <p style:color={colors[rating]}>
-            {rating}: {data.properties[`${rating}_count`].toLocaleString()} roads,
-            {(data.properties[`${rating}_length`] / 1000).toFixed(2)} km
-          </p>
-        {/each}
+        <table>
+          <tr>
+            <th>Scenario</th>
+            <th style:color={colors.red}>Red</th>
+            <th style:color={colors.amber}>Amber</th>
+            <th style:color={colors.green}>Green</th>
+          </tr>
+          {#each scenarios as scenario}
+            <tr>
+              <th>{scenario}</th>
+              {#each ratings as rating}
+                {@const count = data.properties[`counts_${scenario}_${rating}`]}
+                {@const length =
+                  data.properties[`lengths_${scenario}_${rating}`]}
+                <td>
+                  {count.toLocaleString()} roads, total of {(
+                    length / 1000
+                  ).toFixed(2)} km
+                </td>
+              {/each}
+            </tr>
+          {/each}
+        </table>
       {/if}
     </Popup>
   </FillLayer>
@@ -55,9 +70,3 @@
     }}
   />
 </GeoJSON>
-
-<style>
-  :global(.popup .maplibregl-popup-content) {
-    background-color: var(--pico-background-color);
-  }
-</style>

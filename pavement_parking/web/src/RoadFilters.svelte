@@ -4,22 +4,23 @@
   export let filters: Filters;
 
   let classes = ["A", "B", "C", "Unclassified"] as const;
+  let scenarios = [
+    ["U", "No parking restriction"],
+    ["X", "Parking one side only"],
+    ["Y", "One-way, parking both sides"],
+    ["Z", "One-way, parking one side only"],
+  ];
 </script>
 
 <fieldset>
-  <legend>Color ratings using:</legend>
-  <label>
-    <input
-      type="radio"
-      value="rating_exc_pavements"
-      bind:group={filters.useRating}
-    />
-    average width excluding pavements (all roads)
-  </label>
-  <label>
-    <input type="radio" value="rating_change" bind:group={filters.useRating} />
-    average width excluding pavements (changes only)
-  </label>
+  <legend>Scenario:</legend>
+
+  {#each scenarios as [value, label]}
+    <label>
+      <input type="radio" {value} bind:group={filters.scenario} />
+      {value}: {label}
+    </label>
+  {/each}
 </fieldset>
 
 <fieldset>
@@ -35,11 +36,6 @@
   <label style:color={colors.red}>
     <input type="checkbox" bind:checked={filters.showRatings.red} />
     Red
-  </label>
-  <label>
-    <!-- The color doesn't show up -->
-    <input type="checkbox" bind:checked={filters.showRatings.no_change} />
-    No Change
   </label>
 </fieldset>
 

@@ -47,7 +47,7 @@
     }}
     beforeId="Road numbers"
   >
-    <Popup openOn="hover" let:data popupClass="popup">
+    <Popup openOn="hover" let:data>
       {#if data?.properties}
         <h1>{data.properties.GEO_ID}</h1>
         <p>
@@ -73,9 +73,3 @@
     }}
   />
 </GeoJSON>
-
-<style>
-  :global(.popup .maplibregl-popup-content) {
-    background-color: var(--pico-background-color);
-  }
-</style>
