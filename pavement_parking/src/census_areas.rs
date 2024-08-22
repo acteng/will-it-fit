@@ -77,14 +77,14 @@ impl CensusAreas {
     pub fn aggregate_kerb_length_per_oa(
         &mut self,
         geom: &LineString,
-        average_rating: Rating,
+        rating: Rating,
         class: Class,
     ) -> Result<(Option<String>, f64)> {
         // For each output area, sum the kerb length where it is possible to park a car.
         // Calculate the parkable kerb length per car in the area.
 
         // Estimate the length of the kerb where it is possible to park a car
-        let parkable_length = parkable_kerb_length(geom, average_rating, class);
+        let parkable_length = parkable_kerb_length(geom, rating, class);
 
         // Assign each road to exactly one output area. If it intersects multiple output areas,
         // it can be assigned by arbitrary but repeatable method.

@@ -13,8 +13,8 @@
 
     <p>
       This uses OS MasterMap Highways Network data, using road classification
-      and average and minimum width. According to the table below (thresholds
-      and methodology TBD), each road is assigned a rating.
+      and average width. According to the table below (thresholds and
+      methodology TBD), each road is assigned a rating.
     </p>
 
     <table>

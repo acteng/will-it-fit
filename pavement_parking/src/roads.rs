@@ -4,11 +4,11 @@ use geo::{Coord, LineString, MapCoordsInPlace};
 pub struct Road {
     pub geom: LineString,
     pub class: Class,
-    pub road_average: f64,
-    pub road_minimum: f64,
+    pub road_average_width: f64,
+    pub road_minimum_width: f64,
     /// Assume that where there are pavements on both sides of the road, then this value is the sum
     /// of both pavements. If there is only one pavement, then this value is the width of that.
-    pub pavement_average: f64,
+    pub pavement_average_width: f64,
     pub direction: String,
 }
 
@@ -46,16 +46,16 @@ impl Road {
             y: trim_f64(y),
         });
 
-        let Some(road_average) = input.field_as_double_by_name("roadwidth_average")? else {
+        let Some(road_average_width) = input.field_as_double_by_name("roadwidth_average")? else {
             // Sometimes this really is missing
             return Ok(None);
         };
-        let Some(road_minimum) = input.field_as_double_by_name("roadwidth_minimum")? else {
+        let Some(road_minimum_width) = input.field_as_double_by_name("roadwidth_minimum")? else {
             // Sometimes this really is missing
             return Ok(None);
         };
 
-        let Some(pavement_average) =
+        let Some(pavement_average_width) =
             input.field_as_double_by_name("presenceofpavement_averagewidth_m")?
         else {
             bail!("Missing presenceofpavement_averagewidth_m");
@@ -74,9 +74,9 @@ impl Road {
         Ok(Some(Self {
             geom,
             class,
-            road_average,
-            road_minimum,
-            pavement_average,
+            road_average_width,
+            road_minimum_width,
+            pavement_average_width,
             direction,
         }))
     }

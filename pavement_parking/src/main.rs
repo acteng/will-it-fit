@@ -69,37 +69,30 @@ fn handle_road(
         return Ok(());
     };
 
-    let average_rating_inc_pavements =
-        Rating::new(road.class, road.road_average + road.pavement_average);
-    let average_rating_exc_pavements = Rating::new(road.class, road.road_average);
-    let minimum_rating = Rating::new(road.class, road.road_minimum);
+    let rating_inc_pavements = Rating::new(
+        road.class,
+        road.road_average_width + road.pavement_average_width,
+    );
+    let rating_exc_pavements = Rating::new(road.class, road.road_average_width);
 
-    let rating_change = if average_rating_inc_pavements == average_rating_exc_pavements {
+    let rating_change = if rating_inc_pavements == rating_exc_pavements {
         "no_change"
     } else {
-        average_rating_exc_pavements.to_str()
+        rating_exc_pavements.to_str()
     };
 
-    let (output_area_geoid, parkable_length) = census_areas.aggregate_kerb_length_per_oa(
-        &road.geom,
-        average_rating_exc_pavements,
-        road.class,
-    )?;
+    let (output_area_geoid, parkable_length) =
+        census_areas.aggregate_kerb_length_per_oa(&road.geom, rating_exc_pavements, road.class)?;
 
-    // TODO Use average_rating_exc_pavements for now
-    boundaries.handle_road(&road.geom, average_rating_exc_pavements);
+    boundaries.handle_road(&road.geom, rating_exc_pavements);
 
     // Include the road in the output
     let mut output_line = geojson::Feature::from(geojson::Value::from(&road.geom));
-    output_line.set_property("average_width", road.road_average);
-    output_line.set_property("minimum_width", road.road_minimum);
-    output_line.set_property("pavement_average_width", road.pavement_average);
-    output_line.set_property("average_rating", average_rating_exc_pavements.to_str());
-    output_line.set_property(
-        "average_rating_inc_pavements",
-        average_rating_inc_pavements.to_str(),
-    );
-    output_line.set_property("minimum_rating", minimum_rating.to_str());
+    output_line.set_property("road_average_width", road.road_average_width);
+    output_line.set_property("road_minimum_width", road.road_minimum_width);
+    output_line.set_property("pavement_average_width", road.pavement_average_width);
+    output_line.set_property("rating_exc_pavements", rating_exc_pavements.to_str());
+    output_line.set_property("rating_inc_pavements", rating_inc_pavements.to_str());
     output_line.set_property("parkable_length", parkable_length);
     output_line.set_property(
         "output_area_geoid",
