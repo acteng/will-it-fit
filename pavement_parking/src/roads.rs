@@ -1,5 +1,9 @@
 use anyhow::{bail, Result};
+use enum_map::EnumMap;
 use geo::{Coord, HaversineLength, LineString, MapCoordsInPlace};
+use geojson::{Feature, Value};
+
+use crate::{Rating, Scenario};
 
 // All distance units are in meters
 pub struct Road {
@@ -14,6 +18,8 @@ pub struct Road {
     /// Assume that where there are pavements on both sides of the road, then this value is the sum
     /// of both pavements. If there is only one pavement, then this value is the width of that.
     pub pavement_average_width: f64,
+
+    pub ratings: EnumMap<Scenario, Rating>,
 }
 
 #[derive(Clone, Copy, Debug)]
@@ -46,8 +52,8 @@ impl Road {
         let mut geom: LineString = input.geometry().unwrap().to_geo()?.try_into()?;
         // Remove unnecessary precision
         geom.map_coords_in_place(|Coord { x, y }| Coord {
-            x: trim_f64(x),
-            y: trim_f64(y),
+            x: trim_wgs84(x),
+            y: trim_wgs84(y),
         });
         let length = geom.haversine_length();
 
@@ -76,6 +82,10 @@ impl Road {
             x => bail!("Unknown directionality {x}"),
         };
 
+        // TODO Only consider road width as input, or do we want to continue to also try with
+        // pavement width?
+        let ratings = EnumMap::from_fn(|scenario| Rating::new(scenario, class, road_average_width));
+
         Ok(Some(Self {
             geom,
             length,
@@ -86,10 +96,40 @@ impl Road {
             road_average_width,
             road_minimum_width,
             pavement_average_width,
+
+            ratings,
         }))
+    }
+
+    pub fn to_gj(self, parkable_length: f64, output_area_geoid: Option<String>) -> Feature {
+        let mut f = Feature::from(Value::from(&self.geom));
+        f.set_property("length", trim_meters(self.length));
+
+        f.set_property("class", format!("{:?}", self.class));
+        f.set_property("direction", self.direction);
+
+        f.set_property("road_average_width", self.road_average_width);
+        f.set_property("road_minimum_width", self.road_minimum_width);
+        f.set_property("pavement_average_width", self.pavement_average_width);
+
+        for (scenario, rating) in self.ratings {
+            f.set_property(format!("rating_{:?}", scenario), rating.to_str());
+        }
+
+        f.set_property("parkable_length", trim_meters(parkable_length));
+        f.set_property(
+            "output_area_geoid",
+            output_area_geoid.unwrap_or("NONE".to_string()),
+        );
+
+        f
     }
 }
 
-fn trim_f64(x: f64) -> f64 {
+fn trim_wgs84(x: f64) -> f64 {
     (x * 10e6).round() / 10e6
+}
+
+fn trim_meters(x: f64) -> f64 {
+    (x * 100.0).round() / 100.0
 }
