@@ -117,6 +117,7 @@ impl Road {
         }
 
         f.set_property("parkable_length", trim_meters(parkable_length));
+        // TODO Just debug right now, not used in the UI
         f.set_property(
             "output_area_geoid",
             output_area_geoid.unwrap_or("NONE".to_string()),

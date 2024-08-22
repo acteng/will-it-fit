@@ -1,7 +1,7 @@
 <script lang="ts">
   import { constructMatchExpression } from "svelte-utils/map";
   import { LineLayer, Popup, hoverStateFilter } from "svelte-maplibre";
-  import { colors, type Mode, type Filters } from "./types";
+  import { colors, scenarios, type Mode, type Filters } from "./types";
   import type { ExpressionSpecification } from "maplibre-gl";
 
   export let show: Mode;
@@ -22,7 +22,7 @@
       "all",
       ["has", "class"],
       ["in", ["get", "class"], ["literal", classes]],
-      ["in", ["get", f.useRating], ["literal", ratings]],
+      ["in", ["get", `rating_${f.scenario}`], ["literal", ratings]],
       ["in", ["get", "direction"], ["literal", directions]],
     ];
   }
@@ -36,44 +36,36 @@
   paint={{
     "line-width": hoverStateFilter(5, 10),
     "line-color": constructMatchExpression(
-      ["get", roadFilters.useRating],
-      {
-        green: colors.green,
-        amber: colors.amber,
-        red: colors.red,
-        TODO: "black",
-      },
+      ["get", `rating_${roadFilters.scenario}`],
+      colors,
       "black",
     ),
   }}
   beforeId="Road numbers"
 >
-  <Popup openOn="hover" let:data popupClass="popup">
+  <Popup openOn="hover" let:data>
     {#if data?.properties}
       <h1>{data.properties.class} road</h1>
       <p>Direction: {data.properties.direction}</p>
+      <p>Length: {data.properties.length} meters</p>
+
+      <hr />
+
       <p>
-        Average road width (excluding pavements) {data.properties
-          .road_average_width}, rating {data.properties.rating}
-      </p>
-      <p>
-        Minimum road width {data.properties.road_minimum_width}
+        Carriageway width: {data.properties.road_average_width} average, {data
+          .properties.road_minimum_width} minimum
       </p>
       <p>Pavement average width: {data.properties.pavement_average_width}</p>
-      <p>
-        {#if data.properties.rating_change == "no_change"}
-          Rating is not changed by excluding pavement parking
-        {:else}
-          Change: Rating including pavement parking is {data.properties
-            .rating_inc_pavements}
-        {/if}
-      </p>
+
+      <hr />
+
+      {#each scenarios as scenario}
+        <p>
+          In scenario {scenario}, rating is {data.properties[
+            `rating_${scenario}`
+          ]}
+        </p>
+      {/each}
     {/if}
   </Popup>
 </LineLayer>
-
-<style>
-  :global(.popup .maplibregl-popup-content) {
-    background-color: var(--pico-background-color);
-  }
-</style>

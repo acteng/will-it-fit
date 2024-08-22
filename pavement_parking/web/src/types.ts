@@ -1,12 +1,11 @@
 export type Mode = "roads" | "lad-summary" | "ca-summary" | "census-area";
 
 export interface Filters {
-  useRating: "rating_exc_pavements" | "rating_change";
+  scenario: "U" | "X" | "Y" | "Z";
   showRatings: {
     green: boolean;
     amber: boolean;
     red: boolean;
-    no_change: boolean;
   };
   showClasses: {
     A: boolean;
@@ -21,12 +20,11 @@ export interface Filters {
 }
 
 export const defaultFilters: Filters = {
-  useRating: "rating_exc_pavements",
+  scenario: "U",
   showRatings: {
     green: true,
     amber: true,
     red: true,
-    no_change: true,
   },
   showClasses: {
     A: true,
@@ -44,5 +42,7 @@ export const colors = {
   green: "#006853",
   amber: "#ffd833",
   red: "#b73d25",
-  black: "#000000",
 };
+
+export const scenarios = ["U", "X", "Y", "Z"] as const;
+export const ratings = ["red", "amber", "green"] as const;
