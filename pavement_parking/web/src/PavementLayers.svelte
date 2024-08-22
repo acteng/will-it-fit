@@ -53,12 +53,11 @@
       <h1>{data.properties.class} road</h1>
       <p>Direction: {data.properties.direction}</p>
       <p>
-        Average road width {data.properties.average_width}, rating {data
-          .properties.average_rating}
+        Average road width (excluding pavements) {data.properties
+          .road_average_width}, rating {data.properties.rating}
       </p>
       <p>
-        Minimum road width {data.properties.minimum_width}, rating {data
-          .properties.minimum_rating}
+        Minimum road width {data.properties.road_minimum_width}
       </p>
       <p>Pavement average width: {data.properties.pavement_average_width}</p>
       <p>
@@ -66,7 +65,7 @@
           Rating is not changed by excluding pavement parking
         {:else}
           Change: Rating including pavement parking is {data.properties
-            .average_rating_inc_pavements}
+            .rating_inc_pavements}
         {/if}
       </p>
     {/if}

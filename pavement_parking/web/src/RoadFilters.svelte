@@ -9,16 +9,16 @@
 <fieldset>
   <legend>Color ratings using:</legend>
   <label>
-    <input type="radio" value="average_rating" bind:group={filters.useRating} />
-    average width (all roads)
+    <input
+      type="radio"
+      value="rating_exc_pavements"
+      bind:group={filters.useRating}
+    />
+    average width excluding pavements (all roads)
   </label>
   <label>
     <input type="radio" value="rating_change" bind:group={filters.useRating} />
-    average width (changes only)
-  </label>
-  <label>
-    <input type="radio" value="minimum_rating" bind:group={filters.useRating} />
-    minimum width (all roads)
+    average width excluding pavements (changes only)
   </label>
 </fieldset>
 

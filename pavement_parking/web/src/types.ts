@@ -1,7 +1,7 @@
 export type Mode = "roads" | "lad-summary" | "ca-summary" | "census-area";
 
 export interface Filters {
-  useRating: "average_rating" | "rating_change" | "minimum_rating";
+  useRating: "rating_exc_pavements" | "rating_change";
   showRatings: {
     green: boolean;
     amber: boolean;
@@ -21,7 +21,7 @@ export interface Filters {
 }
 
 export const defaultFilters: Filters = {
-  useRating: "average_rating",
+  useRating: "rating_exc_pavements",
   showRatings: {
     green: true,
     amber: true,
