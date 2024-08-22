@@ -8,7 +8,7 @@ use geo::{Contains, MultiPolygon, Polygon};
 use geojson::{Feature, FeatureCollection, FeatureWriter, Value};
 use rstar::{primitives::GeomWithData, RTree, RTreeObject};
 
-use crate::{Rating, Road};
+use crate::{Rating, Road, Scenario};
 
 /// Aggregate counts per LAD and CA boundaries
 pub struct Boundaries {
@@ -17,8 +17,10 @@ pub struct Boundaries {
 }
 
 struct Boundary {
-    counts: EnumMap<Rating, usize>,
-    total_length: EnumMap<Rating, f64>,
+    any_matches: bool,
+    // Given a scenario and rating, count the roads and sum the length
+    counts: EnumMap<Scenario, EnumMap<Rating, usize>>,
+    total_length: EnumMap<Scenario, EnumMap<Rating, f64>>,
 }
 
 impl Boundaries {
@@ -42,6 +44,7 @@ impl Boundaries {
             info.insert(
                 name,
                 Boundary {
+                    any_matches: false,
                     counts: EnumMap::default(),
                     total_length: EnumMap::default(),
                 },
@@ -54,7 +57,7 @@ impl Boundaries {
         Ok(Self { rtree, info })
     }
 
-    pub fn handle_road(&mut self, road: &Road, rating: Rating) {
+    pub fn handle_road(&mut self, road: &Road) {
         // Find all matching boundaries
         for obj in self
             .rtree
@@ -63,31 +66,45 @@ impl Boundaries {
             // TODO Or even just intersects, to handle boundaries?
             if obj.geom().contains(&road.geom) {
                 let info = self.info.get_mut(&obj.data).unwrap();
-                info.counts[rating] += 1;
-                info.total_length[rating] += road.length;
+                info.any_matches = true;
+                for (scenario, counts) in &mut info.counts {
+                    counts[road.ratings[scenario]] += 1;
+                }
+                for (scenario, lengths) in &mut info.total_length {
+                    lengths[road.ratings[scenario]] += road.length;
+                }
             }
         }
     }
 
-    /// Write all boundaries with non-zero counts
+    /// Write all boundaries with at least one road
     pub fn write_output(mut self, path: &str) -> Result<()> {
         let mut summaries_writer = FeatureWriter::from_writer(BufWriter::new(File::create(path)?));
         for obj in self.rtree.drain() {
             let info = &self.info[&obj.data];
-            if info.counts[Rating::Red] + info.counts[Rating::Amber] + info.counts[Rating::Green]
-                == 0
-            {
+            if !info.any_matches {
                 continue;
             }
 
             let mut f = Feature::from(Value::from(obj.geom()));
             f.set_property("name", obj.data);
-            f.set_property("red_count", info.counts[Rating::Red]);
-            f.set_property("amber_count", info.counts[Rating::Amber]);
-            f.set_property("green_count", info.counts[Rating::Green]);
-            f.set_property("red_length", info.total_length[Rating::Red]);
-            f.set_property("amber_length", info.total_length[Rating::Amber]);
-            f.set_property("green_length", info.total_length[Rating::Green]);
+
+            // Flatten the table as string keys, since maplibre / MVT doesn't work well with nested
+            // properties
+            for (scenario, counts) in &info.counts {
+                for (rating, count) in counts {
+                    f.set_property(format!("counts_{:?}_{}", scenario, rating.to_str()), *count);
+                }
+            }
+            for (scenario, lengths) in &info.total_length {
+                for (rating, length) in lengths {
+                    f.set_property(
+                        format!("lengths_{:?}_{}", scenario, rating.to_str()),
+                        length.round() as usize,
+                    );
+                }
+            }
+
             summaries_writer.write_feature(&f)?;
         }
         Ok(())

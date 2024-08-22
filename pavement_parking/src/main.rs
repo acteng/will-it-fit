@@ -9,7 +9,7 @@ use indicatif::{ProgressBar, ProgressStyle};
 
 use crate::boundaries::Boundaries;
 use crate::census_areas::CensusAreas;
-use crate::ratings::Rating;
+use crate::ratings::{Rating, Scenario};
 use crate::roads::{Class, Road};
 
 mod boundaries;
@@ -69,39 +69,11 @@ fn handle_road(
         return Ok(());
     };
 
-    let rating_inc_pavements = Rating::new(
-        road.class,
-        road.road_average_width + road.pavement_average_width,
-    );
-    let rating_exc_pavements = Rating::new(road.class, road.road_average_width);
+    boundaries.handle_road(&road);
 
-    let rating_change = if rating_inc_pavements == rating_exc_pavements {
-        "no_change"
-    } else {
-        rating_exc_pavements.to_str()
-    };
+    let (output_area_geoid, parkable_length) = census_areas.aggregate_kerb_length_per_oa(&road)?;
 
-    let (output_area_geoid, parkable_length) =
-        census_areas.aggregate_kerb_length_per_oa(&road.geom, rating_exc_pavements, road.class)?;
-
-    boundaries.handle_road(&road, rating_exc_pavements);
-
-    // Include the road in the output
-    let mut output_line = geojson::Feature::from(geojson::Value::from(&road.geom));
-    output_line.set_property("road_average_width", road.road_average_width);
-    output_line.set_property("road_minimum_width", road.road_minimum_width);
-    output_line.set_property("pavement_average_width", road.pavement_average_width);
-    output_line.set_property("rating_exc_pavements", rating_exc_pavements.to_str());
-    output_line.set_property("rating_inc_pavements", rating_inc_pavements.to_str());
-    output_line.set_property("parkable_length", parkable_length);
-    output_line.set_property(
-        "output_area_geoid",
-        output_area_geoid.unwrap_or("NONE".to_string()),
-    );
-    output_line.set_property("rating_change", rating_change);
-    output_line.set_property("class", format!("{:?}", road.class));
-    output_line.set_property("direction", road.direction);
-    writer.write_feature(&output_line)?;
+    writer.write_feature(&road.to_gj(parkable_length, output_area_geoid))?;
 
     Ok(())
 }

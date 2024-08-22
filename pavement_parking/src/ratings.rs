@@ -2,6 +2,21 @@ use enum_map::Enum;
 
 use crate::Class;
 
+// TODO Come up with better shorthand names
+// Note the Full parking ban case isn't captured here -- under that scenario, every road is
+// effectively green
+#[derive(Clone, Copy, Debug, PartialEq, Enum)]
+pub enum Scenario {
+    /// No parking restrictions
+    U,
+    /// Two-way traffic, parking one side only
+    X,
+    /// One-way traffic, parking both sies
+    Y,
+    /// One-way traffic, parking one side only
+    Z,
+}
+
 #[derive(Clone, Copy, PartialEq, Enum)]
 pub enum Rating {
     Red,
@@ -10,14 +25,26 @@ pub enum Rating {
 }
 
 impl Rating {
-    pub fn new(class: Class, width: f64) -> Self {
-        // From an internal PDF, the "No parking restriction" scenario
-        let (desirable_min, absolute_min) = match class {
+    pub fn new(scenario: Scenario, class: Class, width: f64) -> Self {
+        // From an internal PDF
+        let (desirable_min, absolute_min) = match (scenario, class) {
             // TODO Not filled out
-            Class::A => (1.0, 0.0),
-            Class::B => (12.8, 11.5),
-            Class::C => (10.0, 9.1),
-            Class::Unclassified => (9.5, 8.4),
+            (_, Class::A) => (1.0, 0.0),
+
+            (Scenario::U, Class::B) => (12.8, 11.5),
+            (Scenario::X, Class::B) => (10.3, 9.0),
+            (Scenario::Y, Class::B) => (8.9, 8.25),
+            (Scenario::Z, Class::B) => (6.4, 5.75),
+
+            (Scenario::U, Class::C) => (10.0, 9.1),
+            (Scenario::X, Class::C) => (8.0, 7.3),
+            (Scenario::Y, Class::C) => (7.0, 6.35),
+            (Scenario::Z, Class::C) => (5.0, 4.55),
+
+            (Scenario::U, Class::Unclassified) => (9.5, 8.4),
+            (Scenario::X, Class::Unclassified) => (7.5, 6.6),
+            (Scenario::Y, Class::Unclassified) => (6.75, 6.0),
+            (Scenario::Z, Class::Unclassified) => (4.75, 4.2),
         };
 
         if width >= desirable_min {
@@ -34,32 +61,6 @@ impl Rating {
             Self::Red => "red",
             Self::Amber => "amber",
             Self::Green => "green",
-        }
-    }
-}
-
-#[allow(unused)]
-fn old_table(class: Class, width: f64) -> Rating {
-    match class {
-        Class::A | Class::B => {
-            if width >= 11.8 {
-                Rating::Green
-            } else if width >= 10.4 {
-                Rating::Amber
-            } else {
-                Rating::Red
-            }
-        }
-
-        Class::C | Class::Unclassified => {
-            if width >= 9.0 {
-                Rating::Green
-            } else if width >= 7.5 {
-                Rating::Amber
-            } else {
-                // TODO Table doesn't handle [7, 7.5]
-                Rating::Red
-            }
         }
     }
 }

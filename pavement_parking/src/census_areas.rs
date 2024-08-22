@@ -5,12 +5,12 @@ use anyhow::{bail, Result};
 use fs_err::File;
 use gdal::vector::LayerAccess;
 use gdal::Dataset;
-use geo::{GeodesicLength, Geometry, Intersects, LineString, MultiPolygon, Polygon};
+use geo::{Geometry, Intersects, MultiPolygon, Polygon};
 use geojson::{Feature, FeatureWriter, Value};
 use indicatif::{ProgressBar, ProgressStyle};
 use rstar::{primitives::GeomWithData, RTree, RTreeObject};
 
-use crate::{Class, Rating};
+use crate::{Class, Rating, Road, Scenario};
 
 pub struct CensusAreas {
     rtree: RTree<GeomWithData<Polygon, String>>,
@@ -74,17 +74,12 @@ impl CensusAreas {
 
     // Returns the GEOID of the census area the road is assigned to, and the parkable length. Also
     // updates the census_areas with the kerb length per assigned road segment
-    pub fn aggregate_kerb_length_per_oa(
-        &mut self,
-        geom: &LineString,
-        rating: Rating,
-        class: Class,
-    ) -> Result<(Option<String>, f64)> {
+    pub fn aggregate_kerb_length_per_oa(&mut self, road: &Road) -> Result<(Option<String>, f64)> {
         // For each output area, sum the kerb length where it is possible to park a car.
         // Calculate the parkable kerb length per car in the area.
 
         // Estimate the length of the kerb where it is possible to park a car
-        let parkable_length = parkable_kerb_length(geom, rating, class);
+        let parkable_length = parkable_kerb_length(road);
 
         // Assign each road to exactly one output area. If it intersects multiple output areas,
         // it can be assigned by arbitrary but repeatable method.
@@ -92,8 +87,8 @@ impl CensusAreas {
         // Then select the one with the alphabetically first GEOID.
         let target_geoid = self
             .rtree
-            .locate_in_envelope_intersecting_mut(&geom.envelope())
-            .filter(|oa| oa.geom().intersects(geom))
+            .locate_in_envelope_intersecting_mut(&road.geom.envelope())
+            .filter(|oa| oa.geom().intersects(&road.geom))
             .map(|oa| oa.data.clone())
             .min();
         if let Some(ref geoid) = target_geoid {
@@ -124,20 +119,21 @@ impl CensusAreas {
     }
 }
 
-fn parkable_kerb_length(geom: &LineString, rating: Rating, class: Class) -> f64 {
+fn parkable_kerb_length(road: &Road) -> f64 {
     // Returns the length of the kerb where it is possible to park a car
     // i.e. not on a junction or a pedestrian crossing, etc.
     // This attempts to implement the table of proposed interventions in
     // the Pavement Parking Assessment Document
 
-    // TODO Haversine?
-    let raw_length = geom.geodesic_length();
+    let raw_length = road.length;
 
-    let kerb_length = match rating {
+    let kerb_length = match road.ratings[Scenario::U] {
         // If the road is wide enough, assume that both sides are parkable
+        // TODO Rethink this logic. Green or amber for Unrestricted both mean parking on both sides
+        // is OK?
         Rating::Green => 2.0 * raw_length,
         Rating::Amber => raw_length,
-        Rating::Red => match class {
+        Rating::Red => match road.class {
             Class::A => 0.0,
             Class::B | Class::C | Class::Unclassified => raw_length,
         },
