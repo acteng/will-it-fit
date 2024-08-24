@@ -6,7 +6,13 @@
     VectorTileSource,
     hoverStateFilter,
   } from "svelte-maplibre";
-  import { colors, scenarios, type Mode, type Filters } from "./types";
+  import {
+    colors,
+    scenarios,
+    interventions,
+    type Mode,
+    type Filters,
+  } from "./types";
   import type { ExpressionSpecification } from "maplibre-gl";
 
   export let show: Mode;
@@ -73,6 +79,9 @@
             ]}
           </p>
         {/each}
+        <p>
+          Intervention required: {interventions[data.properties.intervention]}
+        </p>
       {/if}
     </Popup>
   </LineLayer>

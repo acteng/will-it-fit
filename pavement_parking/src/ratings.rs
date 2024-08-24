@@ -1,4 +1,4 @@
-use enum_map::Enum;
+use enum_map::{Enum, EnumMap};
 
 use crate::Class;
 
@@ -62,5 +62,39 @@ impl Rating {
             Self::Amber => "amber",
             Self::Green => "green",
         }
+    }
+}
+
+/// Isomorphic to `Option<Scenario>`, but seems more clear to represent this way.
+#[derive(Clone, Copy, Debug, PartialEq, Enum)]
+pub enum Intervention {
+    /// No change needed (Scenario::U)
+    None,
+    Y,
+    X,
+    Z,
+    /// No scenario yields green
+    Impossible,
+}
+
+impl Intervention {
+    // TODO The ordering here may need to vary locally, especially depending on the total
+    // supply/demand of parking.
+    pub fn calculate(ratings: &EnumMap<Scenario, Rating>, already_one_way: bool) -> Self {
+        for (scenario, intervention) in [
+            (Scenario::U, Intervention::None),
+            (Scenario::Y, Intervention::Y),
+            (Scenario::X, Intervention::X),
+            (Scenario::Z, Intervention::Z),
+        ] {
+            if already_one_way && scenario == Scenario::X {
+                continue;
+            }
+
+            if ratings[scenario] == Rating::Green {
+                return intervention;
+            }
+        }
+        Intervention::Impossible
     }
 }

@@ -8,7 +8,7 @@ use geo::{Contains, MultiPolygon, Polygon};
 use geojson::{Feature, FeatureCollection, FeatureWriter, Value};
 use rstar::{primitives::GeomWithData, RTree, RTreeObject};
 
-use crate::{Rating, Road, Scenario};
+use crate::{Intervention, Rating, Road, Scenario};
 
 /// Aggregate counts per LAD and CA boundaries
 pub struct Boundaries {
@@ -21,6 +21,9 @@ struct Boundary {
     // Given a scenario and rating, count the roads and sum the length
     counts: EnumMap<Scenario, EnumMap<Rating, usize>>,
     total_length: EnumMap<Scenario, EnumMap<Rating, f64>>,
+
+    intervention_counts: EnumMap<Intervention, usize>,
+    intervention_total_length: EnumMap<Intervention, f64>,
 }
 
 impl Boundaries {
@@ -47,6 +50,8 @@ impl Boundaries {
                     any_matches: false,
                     counts: EnumMap::default(),
                     total_length: EnumMap::default(),
+                    intervention_counts: EnumMap::default(),
+                    intervention_total_length: EnumMap::default(),
                 },
             );
         }
@@ -73,6 +78,8 @@ impl Boundaries {
                 for (scenario, lengths) in &mut info.total_length {
                     lengths[road.ratings[scenario]] += road.length;
                 }
+                info.intervention_counts[road.intervention] += 1;
+                info.intervention_total_length[road.intervention] += road.length;
             }
         }
     }
@@ -103,6 +110,15 @@ impl Boundaries {
                         length.round() as usize,
                     );
                 }
+            }
+            for (intervention, count) in &info.intervention_counts {
+                f.set_property(format!("intervention_counts_{:?}", intervention), *count);
+            }
+            for (intervention, length) in &info.intervention_total_length {
+                f.set_property(
+                    format!("intervention_lengths_{:?}", intervention),
+                    length.round() as usize,
+                );
             }
 
             summaries_writer.write_feature(&f)?;

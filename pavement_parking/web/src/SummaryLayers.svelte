@@ -6,7 +6,13 @@
     hoverStateFilter,
     FillLayer,
   } from "svelte-maplibre";
-  import { colors, scenarios, ratings, type Mode } from "./types";
+  import {
+    colors,
+    scenarios,
+    ratings,
+    interventions,
+    type Mode,
+  } from "./types";
 
   export let show: Mode;
   export let url: string;
@@ -30,6 +36,7 @@
     <Popup openOn="hover" let:data>
       {#if data?.properties}
         <h1>{data.properties.name}</h1>
+
         <table>
           <tr>
             <th>Scenario</th>
@@ -50,6 +57,29 @@
                   ).toFixed(2)} km
                 </td>
               {/each}
+            </tr>
+          {/each}
+        </table>
+
+        <table>
+          <tr>
+            <th>Intervention</th>
+            <th>Number of roads</th>
+            <th>Total km</th>
+          </tr>
+          {#each Object.entries(interventions) as [intervention, label]}
+            <tr>
+              <th>{label}</th>
+              <td>
+                {data.properties[
+                  `intervention_counts_${intervention}`
+                ].toLocaleString()}
+              </td>
+              <td>
+                {(
+                  data.properties[`intervention_lengths_${intervention}`] / 1000
+                ).toFixed(2)}
+              </td>
             </tr>
           {/each}
         </table>

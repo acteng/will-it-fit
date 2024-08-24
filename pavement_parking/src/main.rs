@@ -10,7 +10,7 @@ use indicatif::{ProgressBar, ProgressStyle};
 
 use crate::boundaries::Boundaries;
 use crate::census_areas::CensusAreas;
-use crate::ratings::{Rating, Scenario};
+use crate::ratings::{Intervention, Rating, Scenario};
 use crate::roads::{Class, Road};
 
 mod boundaries;
@@ -101,7 +101,7 @@ fn tippecanoe(input: &str, output: &str) -> Result<()> {
         .arg("-Z10")
         .arg("-z11")
         .arg("--drop-densest-as-needed");
-    println!("Running: {cmd:?}");
+    println!("\nRunning: {cmd:?}");
     if !cmd.status()?.success() {
         bail!("tippecanoe failed");
     }

@@ -3,7 +3,7 @@ use enum_map::EnumMap;
 use geo::{Coord, HaversineLength, LineString, MapCoordsInPlace};
 use geojson::{Feature, Value};
 
-use crate::{Rating, Scenario};
+use crate::{Intervention, Rating, Scenario};
 
 // All distance units are in meters
 pub struct Road {
@@ -21,6 +21,7 @@ pub struct Road {
     pub pavement_average_width: f64,
 
     pub ratings: EnumMap<Scenario, Rating>,
+    pub intervention: Intervention,
 }
 
 #[derive(Clone, Copy, Debug)]
@@ -90,6 +91,7 @@ impl Road {
         // TODO Only consider road width as input, or do we want to continue to also try with
         // pavement width?
         let ratings = EnumMap::from_fn(|scenario| Rating::new(scenario, class, road_average_width));
+        let intervention = Intervention::calculate(&ratings, direction == "one-way");
 
         Ok(Some(Self {
             geom,
@@ -104,6 +106,7 @@ impl Road {
             pavement_average_width,
 
             ratings,
+            intervention,
         }))
     }
 
@@ -122,6 +125,7 @@ impl Road {
         for (scenario, rating) in self.ratings {
             f.set_property(format!("rating_{:?}", scenario), rating.to_str());
         }
+        f.set_property("intervention", format!("{:?}", self.intervention));
 
         f.set_property("parkable_length", trim_meters(parkable_length));
         // TODO Just debug right now, not used in the UI

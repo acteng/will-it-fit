@@ -52,3 +52,11 @@ export const scenarios = [
   ["Y", "One-way, parking both sides"],
   ["Z", "One-way, parking one side only"],
 ];
+
+export const interventions = {
+  None: "U: No change needed",
+  Y: "Y: One-way, parking both sides",
+  X: "X: Parking one side only",
+  Z: "Z: One-way, parking one side only",
+  Impossible: "Impossible: No scenario makes the road green",
+};
