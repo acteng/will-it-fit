@@ -44,5 +44,11 @@ export const colors = {
   red: "#b73d25",
 };
 
-export const scenarios = ["U", "X", "Y", "Z"] as const;
 export const ratings = ["red", "amber", "green"] as const;
+
+export const scenarios = [
+  ["U", "No parking restriction"],
+  ["X", "Parking one side only"],
+  ["Y", "One-way, parking both sides"],
+  ["Z", "One-way, parking one side only"],
+];

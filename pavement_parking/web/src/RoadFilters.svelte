@@ -1,15 +1,9 @@
 <script lang="ts">
-  import { colors, type Filters } from "./types";
+  import { colors, scenarios, type Filters } from "./types";
 
   export let filters: Filters;
 
   let classes = ["A", "B", "C", "Unclassified"] as const;
-  let scenarios = [
-    ["U", "No parking restriction"],
-    ["X", "Parking one side only"],
-    ["Y", "One-way, parking both sides"],
-    ["Z", "One-way, parking one side only"],
-  ];
 </script>
 
 <fieldset>

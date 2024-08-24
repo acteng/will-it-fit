@@ -66,9 +66,9 @@
 
         <hr />
 
-        {#each scenarios as scenario}
+        {#each scenarios as [scenario, label]}
           <p>
-            In scenario {scenario}, rating is {data.properties[
+            In scenario {scenario} ({label}), rating is {data.properties[
               `rating_${scenario}`
             ]}
           </p>

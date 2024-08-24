@@ -37,9 +37,9 @@
             <th style:color={colors.amber}>Amber</th>
             <th style:color={colors.green}>Green</th>
           </tr>
-          {#each scenarios as scenario}
+          {#each scenarios as [scenario, label]}
             <tr>
-              <th>{scenario}</th>
+              <th>{scenario}: {label}</th>
               {#each ratings as rating}
                 {@const count = data.properties[`counts_${scenario}_${rating}`]}
                 {@const length =
