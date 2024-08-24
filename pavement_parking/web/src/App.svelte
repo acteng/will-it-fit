@@ -12,7 +12,12 @@
   import RoadFilters from "./RoadFilters.svelte";
   import OutputAreas from "./OutputAreas.svelte";
   import About from "./About.svelte";
-  import { defaultFilters, type Mode } from "./types";
+  import {
+    defaultFilters,
+    interventions,
+    interventionColors,
+    type Mode,
+  } from "./types";
 
   let bounds = window.location.hash
     ? undefined
@@ -58,22 +63,36 @@
           Roads
         </label>
         <label>
-          <input type="radio" value="lad-summary" bind:group={show} />
-          LAD boundaries
-        </label>
-        <label>
-          <input type="radio" value="ca-summary" bind:group={show} />
-          Combined Authority boundaries
-        </label>
-        <label>
-          <input type="radio" value="census-area" bind:group={show} />
-          Parking demand by Output Area
+          <input type="radio" value="interventions" bind:group={show} />
+          Interventions per road
+          <label>
+            <input type="radio" value="lad-summary" bind:group={show} />
+            LAD boundaries
+          </label>
+          <label>
+            <input type="radio" value="ca-summary" bind:group={show} />
+            Combined Authority boundaries
+          </label>
+          <label>
+            <input type="radio" value="census-area" bind:group={show} />
+            Parking demand by Output Area
+          </label>
         </label>
       </fieldset>
 
       {#if show == "roads"}
         {#if zoom >= 10}
           <RoadFilters bind:filters={roadFilters} />
+        {:else}
+          <p>Zoom in more to see roads</p>
+        {/if}
+      {:else if show == "interventions"}
+        {#if zoom >= 10}
+          <ul>
+            {#each Object.entries(interventions) as [intervention, label]}
+              <li style:color={interventionColors[intervention]}>{label}</li>
+            {/each}
+          </ul>
         {:else}
           <p>Zoom in more to see roads</p>
         {/if}

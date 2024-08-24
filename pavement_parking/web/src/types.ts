@@ -1,4 +1,9 @@
-export type Mode = "roads" | "lad-summary" | "ca-summary" | "census-area";
+export type Mode =
+  | "roads"
+  | "interventions"
+  | "lad-summary"
+  | "ca-summary"
+  | "census-area";
 
 export interface Filters {
   scenario: "U" | "X" | "Y" | "Z";
@@ -42,6 +47,13 @@ export const colors = {
   green: "#006853",
   amber: "#ffd833",
   red: "#b73d25",
+};
+export const interventionColors = {
+  None: "black",
+  Y: "#1b9e77",
+  X: "#d95f02",
+  Z: "#7570b3",
+  Impossible: "red",
 };
 
 export const ratings = ["red", "amber", "green"] as const;
