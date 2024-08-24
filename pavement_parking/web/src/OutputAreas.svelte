@@ -1,6 +1,6 @@
 <script lang="ts">
   import {
-    GeoJSON,
+    VectorTileSource,
     LineLayer,
     Popup,
     hoverStateFilter,
@@ -37,8 +37,9 @@
   // TS gets confused by the maplibre expression, so typecast
 </script>
 
-<GeoJSON data={url} generateId>
+<VectorTileSource url={`pmtiles://${url}`}>
   <FillLayer
+    sourceLayer="pavements"
     layout={{ visibility: show == "census-area" ? "visible" : "none" }}
     manageHoverState
     paint={{
@@ -72,4 +73,4 @@
       "line-color": "black",
     }}
   />
-</GeoJSON>
+</VectorTileSource>

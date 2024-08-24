@@ -1,6 +1,7 @@
 use std::io::BufWriter;
+use std::process::Command;
 
-use anyhow::Result;
+use anyhow::{bail, Result};
 use fs_err::File;
 use gdal::vector::LayerAccess;
 use gdal::Dataset;
@@ -56,6 +57,16 @@ fn main() -> Result<()> {
     census_areas.write_output(output_areas_output_path)?;
 
     println!("\n\nWrote '{summaries_output_path}', '{pavements_output_path}' and '{output_areas_output_path}'");
+
+    tippecanoe(
+        &pavements_output_path,
+        &pavements_output_path.replace("geojson", "pmtiles"),
+    )?;
+    tippecanoe(
+        &output_areas_output_path,
+        &output_areas_output_path.replace("geojson", "pmtiles"),
+    )?;
+
     Ok(())
 }
 
@@ -75,5 +86,24 @@ fn handle_road(
 
     writer.write_feature(&road.to_gj(parkable_length, output_area_geoid))?;
 
+    Ok(())
+}
+
+fn tippecanoe(input: &str, output: &str) -> Result<()> {
+    let mut cmd = Command::new("tippecanoe");
+    cmd.arg(input)
+        .arg("-o")
+        .arg(output)
+        .arg("--force") // Overwrite existing output
+        .arg("--generate-ids")
+        .arg("-l")
+        .arg("pavements")
+        .arg("-Z10")
+        .arg("-z11")
+        .arg("--drop-densest-as-needed");
+    println!("Running: {cmd:?}");
+    if !cmd.status()?.success() {
+        bail!("tippecanoe failed");
+    }
     Ok(())
 }

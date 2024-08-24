@@ -1,12 +1,17 @@
 <script lang="ts">
   import { constructMatchExpression } from "svelte-utils/map";
-  import { LineLayer, Popup, hoverStateFilter } from "svelte-maplibre";
+  import {
+    LineLayer,
+    Popup,
+    VectorTileSource,
+    hoverStateFilter,
+  } from "svelte-maplibre";
   import { colors, scenarios, type Mode, type Filters } from "./types";
   import type { ExpressionSpecification } from "maplibre-gl";
 
   export let show: Mode;
+  export let url: string;
   export let roadFilters: Filters;
-  export let sourceLayer: string | undefined;
 
   function makeFilter(f: Filters): ExpressionSpecification {
     let ratings = Object.entries(f.showRatings)
@@ -28,45 +33,47 @@
   }
 </script>
 
-<LineLayer
-  {sourceLayer}
-  filter={makeFilter(roadFilters)}
-  layout={{ visibility: show == "roads" ? "visible" : "none" }}
-  manageHoverState
-  paint={{
-    "line-width": hoverStateFilter(5, 10),
-    "line-color": constructMatchExpression(
-      ["get", `rating_${roadFilters.scenario}`],
-      colors,
-      "black",
-    ),
-  }}
-  beforeId="Road numbers"
->
-  <Popup openOn="hover" let:data>
-    {#if data?.properties}
-      <h1>{data.properties.name || "Unnamed road"}</h1>
-      <p>Class: {data.properties.class} road</p>
-      <p>Direction: {data.properties.direction}</p>
-      <p>Length: {data.properties.length} meters</p>
+<VectorTileSource url={`pmtiles://${url}`}>
+  <LineLayer
+    sourceLayer="pavements"
+    filter={makeFilter(roadFilters)}
+    layout={{ visibility: show == "roads" ? "visible" : "none" }}
+    manageHoverState
+    paint={{
+      "line-width": hoverStateFilter(5, 10),
+      "line-color": constructMatchExpression(
+        ["get", `rating_${roadFilters.scenario}`],
+        colors,
+        "black",
+      ),
+    }}
+    beforeId="Road numbers"
+  >
+    <Popup openOn="hover" let:data>
+      {#if data?.properties}
+        <h1>{data.properties.name || "Unnamed road"}</h1>
+        <p>Class: {data.properties.class} road</p>
+        <p>Direction: {data.properties.direction}</p>
+        <p>Length: {data.properties.length} meters</p>
 
-      <hr />
+        <hr />
 
-      <p>
-        Carriageway width: {data.properties.road_average_width} average, {data
-          .properties.road_minimum_width} minimum
-      </p>
-      <p>Pavement average width: {data.properties.pavement_average_width}</p>
-
-      <hr />
-
-      {#each scenarios as scenario}
         <p>
-          In scenario {scenario}, rating is {data.properties[
-            `rating_${scenario}`
-          ]}
+          Carriageway width: {data.properties.road_average_width} average, {data
+            .properties.road_minimum_width} minimum
         </p>
-      {/each}
-    {/if}
-  </Popup>
-</LineLayer>
+        <p>Pavement average width: {data.properties.pavement_average_width}</p>
+
+        <hr />
+
+        {#each scenarios as scenario}
+          <p>
+            In scenario {scenario}, rating is {data.properties[
+              `rating_${scenario}`
+            ]}
+          </p>
+        {/each}
+      {/if}
+    </Popup>
+  </LineLayer>
+</VectorTileSource>

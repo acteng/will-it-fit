@@ -2,8 +2,6 @@
   import "@picocss/pico/css/pico.jade.min.css";
   import { Layout } from "svelte-utils/two_column_layout";
   import {
-    GeoJSON,
-    VectorTileSource,
     MapLibre,
     MapEvents,
     type LngLatBoundsLike,
@@ -26,16 +24,12 @@
   let params = new URLSearchParams(window.location.search);
   let pavementsUrl = params.get("data") || "";
   let summaryUrl = pavementsUrl.replace(
-    pavementsUrl.endsWith(".geojson")
-      ? "pavements.geojson"
-      : "pavements.pmtiles",
+    "pavements.pmtiles",
     "summaries.geojson",
   );
   let censusUrl = pavementsUrl.replace(
-    pavementsUrl.endsWith(".geojson")
-      ? "pavements.geojson"
-      : "pavements.pmtiles",
-    "output_areas.geojson",
+    "pavements.pmtiles",
+    "output_areas.pmtiles",
   );
 
   let map: Map;
@@ -83,6 +77,8 @@
         {:else}
           <p>Zoom in more to see roads</p>
         {/if}
+      {:else if show == "census-area" && zoom < 10}
+        <p>Zoom in more to see Output Areas</p>
       {/if}
     </div>
 
@@ -95,16 +91,7 @@
       >
         <MapEvents on:zoom={onZoom} />
 
-        {#if pavementsUrl.endsWith(".geojson")}
-          <GeoJSON data={pavementsUrl} generateId>
-            <PavementLayers {show} {roadFilters} sourceLayer={undefined} />
-          </GeoJSON>
-        {:else if pavementsUrl.endsWith(".pmtiles")}
-          <VectorTileSource url={`pmtiles://${pavementsUrl}`}>
-            <PavementLayers {show} {roadFilters} sourceLayer="pavements" />
-          </VectorTileSource>
-        {/if}
-
+        <PavementLayers {show} url={pavementsUrl} {roadFilters} />
         <SummaryLayers {show} url={summaryUrl} />
         <OutputAreas {show} url={censusUrl} />
       </MapLibre>
@@ -113,7 +100,7 @@
 {:else}
   <p>
     Data source not specified. If you're developing locally, try <a
-      href="index.html?data=/pavements.geojson"
+      href="index.html?data=/pavements.pmtiles"
     >
       this
     </a>
