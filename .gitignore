@@ -4,10 +4,3 @@ node_modules
 web/public/
 data_prep/inspire
 data_prep/local_inputs
-
-pavement_parking/inputs
-pavement_parking/web/public/summaries.geojson
-pavement_parking/web/public/pavements.geojson
-pavement_parking/web/public/pavements.pmtiles
-pavement_parking/web/public/output_areas.geojson
-pavement_parking/web/public/output_areas.pmtiles

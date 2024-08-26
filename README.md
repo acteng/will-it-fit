@@ -35,5 +35,3 @@ All of the above needs a flatgeobuf file with polygons to treat as constraints o
 - `data_prep/dissolver` is a WIP rewrite of the mapshaper polygon dissolve algorithm that can limit the area of output polygons
 - `data_prep/fix_osmm` is a script to convert OS MasterMap mbtiles (one of the only provided formats) into flatgeobuf, for easier use elsewhere.
 - `data_prep/merge_files` is a script to turn many GeoJSON files into one flatgeobuf file, used for the INSPIRE script
-
-Finally, `pavement_parking` is checking road width and classification against a table of green/amber/red ratings to determine where pavement parking policies may need to be considered.
