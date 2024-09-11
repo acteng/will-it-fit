@@ -47,16 +47,16 @@
   let lanesOpacity = 80;
   let drawingRoute = false;
 
+  let emptyGj = {
+    type: "FeatureCollection" as const,
+    features: [],
+  };
+
   let routeGj = loadRoute();
   let routeAuthority: Feature<Polygon, { name: string; level: string }> | null =
     null;
 
   let loading: string[] = [];
-
-  let emptyGj = {
-    type: "FeatureCollection" as const,
-    features: [],
-  };
 
   let resultsGj: FeatureCollection<Polygon> = emptyGj;
 
