@@ -26,14 +26,13 @@ test_case_bboxes=`find $this_dir -type f -name "test_case_*_bounding_box.geojson
 
 # Create a parcel file for each test case
 for test_case_bbox in $test_case_bboxes; do
-    echo $test_case_bbox
+    intermediate_file="${test_case_bbox/bounding_box/inspire_parcels_27700}"
     output_file="${test_case_bbox/bounding_box/inspire_parcels}"
-    echo $output_file
-    mapshaper $AREA/v1.geojson -clip $test_case_bbox -o $output_file format=geojson geojson-type=FeatureCollection
+
+    mapshaper $AREA/v1.geojson -clip $test_case_bbox -o $intermediate_file format=geojson geojson-type=FeatureCollection
+    # Convert to WGS84
+    ogr2ogr $output_file -s_srs EPSG:27700 -t_srs EPSG:4326 $intermediate_file
 done
 
 # Clean up intermediate files
-# mkdir -p ../inspire
-# mv v2.geojson ../inspire/$AREA.geojson
-# cd ..
 rm -rf $AREA

@@ -5,3 +5,4 @@ web/public/
 data_prep/inspire
 data_prep/local_inputs
 test_cases/test_case_*_inspire_parcels.geojson
+test_cases/test_case_*_inspire_parcels_27700.geojson

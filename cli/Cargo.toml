@@ -10,6 +10,7 @@ flatgeobuf = { git = "https://github.com/michaelkirk/flatgeobuf/", branch = "mki
 geo = "0.28.0"
 geojson = { git = "https://github.com/georust/geojson", features = ["geo-types"] }
 geozero = { version = "0.13.0", default-features = false, features = ["with-geo"] }
+serde = "1.0.210"
 serde_json = "1.0.117"
 utils = { git = "https://github.com/a-b-street/utils" }
 widths = { path = "../widths" }
