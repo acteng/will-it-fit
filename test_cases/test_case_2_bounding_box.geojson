@@ -1,0 +1,8 @@
+{
+"type": "FeatureCollection",
+"name": "test_case_2_bounding_box",
+"crs": { "type": "name", "properties": { "name": "urn:ogc:def:crs:EPSG::27700" } },
+"features": [
+{ "type": "Feature", "properties": { "test_case_name": "test_case_2", "width": 100.701894, "height": 186.276894, "area": 18758.436017, "perimeter": 573.957576 }, "geometry": { "type": "Polygon", "coordinates": [ [ [ 424336.028977272857446, 569400.797348484862596 ], [ 424436.730871212144848, 569400.797348484862596 ], [ 424436.730871212144848, 569587.074242424103431 ], [ 424336.028977272857446, 569587.074242424103431 ], [ 424336.028977272857446, 569400.797348484862596 ] ] ] } }
+]
+}

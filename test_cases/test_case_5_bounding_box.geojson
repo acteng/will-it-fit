@@ -1,0 +1,8 @@
+{
+"type": "FeatureCollection",
+"name": "test_case_5_bounding_box",
+"crs": { "type": "name", "properties": { "name": "urn:ogc:def:crs:EPSG::27700" } },
+"features": [
+{ "type": "Feature", "properties": { "gml_id": "PREDEFINED.fid-3add56ff_191ab93c9d1_-1de7", "INSPIREID": 25826568, "LABEL": 25826568, "NATIONALCADASTRALREFERENCE": 25826568, "VALIDFROM": "2009-01-19T11:45:10.944Z", "BEGINLIFESPANVERSION": "2009-01-19T11:45:10.944Z", "width": 65.883, "height": 77.479, "area": 5104.548957, "perimeter": 286.724 }, "geometry": { "type": "Polygon", "coordinates": [ [ [ 423936.799999999988358, 567998.721000000019558 ], [ 424002.683000000019092, 567998.721000000019558 ], [ 424002.683000000019092, 568076.199999999953434 ], [ 423936.799999999988358, 568076.199999999953434 ], [ 423936.799999999988358, 567998.721000000019558 ] ] ] } }
+]
+}
