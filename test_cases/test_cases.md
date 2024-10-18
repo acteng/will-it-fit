@@ -1,5 +1,16 @@
 This document gives a high-level overview of the test cases which are used to explore the potential for the road space classification using Inspire polygons.
 
+# About the Test Data
+
+The test data includes data derived from the [Land Registry INSPIRE polygons](https://use-land-property-data.service.gov.uk/datasets/inspire). This data is used under  [Open Government Licence (OGL)](http://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/) and include these attributions:
+
+* This information is subject to Crown copyright and database rights [2024] and is reproduced with the permission of HM Land Registry.  
+* The polygons (including the associated geometry, namely x, y co-ordinates) are subject to Crown copyright and database rights [2024] Ordnance Survey AC0000851063. 
+
+---
+Additionally: Any boundaries between road space and non-road space are approximate. They have been drawn by hand, based on the visual appearance of the map purely for use in this test data, and in no way represent the actual legal boundaries.
+
+
 # Grouping
 
 ## Cases A only involving whole positive INSPIRE polygons
