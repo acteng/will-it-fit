@@ -1,0 +1,8 @@
+{
+"type": "FeatureCollection",
+"name": "test_case_1_bounding_box",
+"crs": { "type": "name", "properties": { "name": "urn:ogc:def:crs:EPSG::27700" } },
+"features": [
+{ "type": "Feature", "properties": { }, "geometry": { "type": "Polygon", "coordinates": [ [ [ 424240, 568880 ], [ 424340, 568880 ], [ 424340, 570021 ], [ 424240, 570021 ], [ 424240, 568880 ] ] ] } }
+]
+}
