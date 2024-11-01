@@ -1,10 +1,10 @@
 use std::collections::HashSet;
 
 use anyhow::Result;
-use geo::{BooleanOps, ChamberlainDuquetteArea, MultiPolygon, Polygon, Relate};
+use geo::{BooleanOps, ChamberlainDuquetteArea, MultiPolygon, Polygon, Relate, UnaryUnion};
 use indicatif::{ParallelProgressIterator, ProgressBar, ProgressStyle};
 use rayon::prelude::*;
-use rstar::{primitives::GeomWithData, ParentNode, RTree, RTreeNode, RTreeObject};
+use rstar::{primitives::GeomWithData, RTree, RTreeObject};
 use union_find_rs::prelude::{DisjointSets, UnionFind};
 
 static PROGRESS_STYLE: &str =
@@ -19,7 +19,9 @@ fn main() -> Result<()> {
     let polygons = read_polygons(&args[1])?;
 
     if true {
-        let output = cascading_union(polygons);
+        println!("Calculating union of {} polygons", polygons.len());
+        let output = MultiPolygon(polygons).unary_union().0;
+        println!("Got {} as a result", output.len());
         return write_polygons("out.geojson", output);
     }
 
@@ -161,67 +163,4 @@ fn union_all(
     out.extend(current.0);
 
     out
-}
-
-fn cascading_union(polygons: Vec<Polygon>) -> Vec<Polygon> {
-    let len = polygons.len();
-    println!("Making rtree for {len} polygons");
-    let rtree = RTree::bulk_load(polygons);
-
-    println!("Cascading union");
-    let progress = ProgressBar::new(len as u64)
-        .with_style(ProgressStyle::with_template(PROGRESS_STYLE).unwrap());
-
-    // From https://gist.github.com/urschrei/cd80b4d2ec3c75f12fa541a5bdbf6489
-    let init = || MultiPolygon::<f64>::new(vec![]);
-    let fold = |accum: MultiPolygon<f64>, poly: &Polygon<f64>| -> MultiPolygon<f64> {
-        progress.inc(1);
-        // NB the argument to union here is wrong / costly, because it won't accept &Polygon
-        // Perhaps our current union method (which accepts &Self) is too strict?
-        accum.union(&MultiPolygon::new(vec![poly.clone()]))
-    };
-    let reduce = |accum1: MultiPolygon<f64>, accum2: MultiPolygon<f64>| -> MultiPolygon<f64> {
-        accum1.union(&accum2)
-    };
-
-    let result = bottom_up_fold_reduce(&rtree, init, fold, reduce).0;
-    progress.finish();
-    result
-}
-
-// From https://gist.github.com/urschrei/cd80b4d2ec3c75f12fa541a5bdbf6489
-// TODO Try the rayon one
-fn bottom_up_fold_reduce<T, S, I, F, R>(
-    tree: &RTree<T>,
-    mut init: I,
-    mut fold: F,
-    mut reduce: R,
-) -> S
-where
-    T: RTreeObject,
-    I: FnMut() -> S,
-    F: FnMut(S, &T) -> S,
-    R: FnMut(S, S) -> S,
-{
-    fn inner<T, S, I, F, R>(parent: &ParentNode<T>, init: &mut I, fold: &mut F, reduce: &mut R) -> S
-    where
-        T: RTreeObject,
-        I: FnMut() -> S,
-        F: FnMut(S, &T) -> S,
-        R: FnMut(S, S) -> S,
-    {
-        parent
-            .children()
-            .iter()
-            .fold(init(), |accum, child| match child {
-                RTreeNode::Leaf(value) => fold(accum, value),
-                RTreeNode::Parent(parent) => {
-                    let value = inner(&parent, init, fold, reduce);
-
-                    reduce(accum, value)
-                }
-            })
-    }
-
-    inner(tree.root(), &mut init, &mut fold, &mut reduce)
 }
