@@ -5,7 +5,7 @@ edition = "2021"
 
 [dependencies]
 anyhow = "1.0.86"
-geo = { git = "https://github.com/RobWalt/geo", branch = "feat/spade-boolops" }
+geo = { git = "https://github.com/urschrei/geo", branch = "cascaded_union" }
 geojson = "0.24.1"
 indicatif = { version = "0.17.8", features = ["rayon"] }
 rayon = "1.10.0"

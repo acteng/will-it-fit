@@ -1,7 +1,7 @@
 use std::collections::HashSet;
 
 use anyhow::Result;
-use geo::{BooleanOps, ChamberlainDuquetteArea, MultiPolygon, Polygon, Relate, SpadeBoolops};
+use geo::{BooleanOps, ChamberlainDuquetteArea, MultiPolygon, Polygon, Relate};
 use indicatif::{ParallelProgressIterator, ProgressBar, ProgressStyle};
 use rayon::prelude::*;
 use rstar::{primitives::GeomWithData, ParentNode, RTree, RTreeNode, RTreeObject};
@@ -178,38 +178,15 @@ fn cascading_union(polygons: Vec<Polygon>) -> Vec<Polygon> {
         progress.inc(1);
         // NB the argument to union here is wrong / costly, because it won't accept &Polygon
         // Perhaps our current union method (which accepts &Self) is too strict?
-        union(&accum, &MultiPolygon::new(vec![poly.clone()]))
+        accum.union(&MultiPolygon::new(vec![poly.clone()]))
     };
     let reduce = |accum1: MultiPolygon<f64>, accum2: MultiPolygon<f64>| -> MultiPolygon<f64> {
-        union(&accum1, &accum2)
+        accum1.union(&accum2)
     };
 
     let result = bottom_up_fold_reduce(&rtree, init, fold, reduce).0;
     progress.finish();
     result
-}
-
-fn union(mp1: &MultiPolygon, mp2: &MultiPolygon) -> MultiPolygon {
-    // Fast, works on WGS84 or planar, crashy
-    if true {
-        println!("union of {} + {}", mp1.0.len(), mp2.0.len());
-        match std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| mp1.union(mp2))) {
-            Ok(result) => {
-                println!("  done with that union, got {} in result", result.0.len());
-                result
-            }
-            Err(err) => {
-                println!("Crash {err:?}");
-                // Give up on unioning here
-                let mut polygons = mp1.0.clone();
-                polygons.extend(mp2.0.clone());
-                MultiPolygon::new(polygons)
-            }
-        }
-    } else {
-        // Slow, works on planar, not crashy
-        SpadeBoolops::union(mp1, mp2).unwrap()
-    }
 }
 
 // From https://gist.github.com/urschrei/cd80b4d2ec3c75f12fa541a5bdbf6489
