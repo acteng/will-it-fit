@@ -1,6 +1,6 @@
 use geo::{
-    BoundingRect, Coord, Densify, EuclideanLength, HaversineDestination, Line, LineIntersection,
-    LineString, Point, Polygon, Rect,
+    BoundingRect, Coord, Densify, Destination, Euclidean, Haversine, Length, Line,
+    LineIntersection, LineString, Point, Polygon, Rect,
 };
 use log::info;
 use rstar::{primitives::GeomWithData, RTree, RTreeObject};
@@ -14,12 +14,8 @@ pub fn bbox(route_wgs84: &LineString, project_away_meters: f64) -> Rect {
     // Increase the bounding box around the route by the max amount that we'll look away.
     let bbox = route_wgs84.bounding_rect().unwrap();
     // TODO This works in the UK, but make sure this is correct everywhere
-    let min = Point::from(bbox.min())
-        .haversine_destination(135.0, project_away_meters)
-        .into();
-    let max = Point::from(bbox.max())
-        .haversine_destination(45.0, project_away_meters)
-        .into();
+    let min = Haversine::destination(Point::from(bbox.min()), 135.0, project_away_meters).into();
+    let max = Haversine::destination(Point::from(bbox.max()), 45.0, project_away_meters).into();
 
     // TODO Var names above aren't always true, so do this to be safe
     LineString::new(vec![min, max]).bounding_rect().unwrap()
@@ -91,7 +87,7 @@ pub fn calculate<O: Output>(
             continue;
         }
         let full_line = Line::new(test_lines[0].end, test_lines[1].end);
-        output.perp_line(&mercator, full_line, full_line.euclidean_length());
+        output.perp_line(&mercator, full_line, full_line.length::<Euclidean>());
     }
     timer.pop();
     info!(
@@ -105,7 +101,7 @@ pub fn calculate<O: Output>(
 fn points_along_line(linestring: &LineString, step_size_meters: f64) -> Vec<(Coord, f64)> {
     let mut result = Vec::new();
     // Using lines instead of coords so we can get the angle -- but is this hard to reason about?
-    for line in linestring.densify(step_size_meters).lines() {
+    for line in linestring.densify::<Euclidean>(step_size_meters).lines() {
         // TODO For the last line, use the last point too
         let pt = line.start;
         let angle = line_angle_degrees(line);
@@ -143,7 +139,7 @@ fn shortest_line_hitting_polygon(
                 geo::algorithm::line_intersection::line_intersection(line, polygon_line)
             {
                 let candidate = Line::new(line.start, intersection);
-                let candidate_length = candidate.euclidean_length();
+                let candidate_length = candidate.length::<Euclidean>();
                 if shortest
                     .as_ref()
                     .map(|(_, len)| candidate_length < *len)

@@ -4,7 +4,7 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-geo = "0.28.0"
+geo = "0.29.2"
 js-sys = "0.3.69"
 log = "0.4.20"
 rstar = "0.12.0"

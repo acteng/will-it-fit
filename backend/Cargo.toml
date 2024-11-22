@@ -11,10 +11,10 @@ anyhow = "1.0.86"
 cavalier_contours = "0.4.0"
 console_error_panic_hook = "0.1.6"
 console_log = "1.0.0"
-flatgeobuf = { git = "https://github.com/michaelkirk/flatgeobuf/", branch = "mkirk/rust-fix-requests" }
-geo = "0.28.0"
+flatgeobuf = "4.4.0"
+geo = "0.29.2"
 geojson = { git = "https://github.com/georust/geojson", features = ["geo-types"] }
-geozero = { version = "0.13.0", default-features = false, features = ["with-geo"] }
+geozero = { version = "0.14.0", default-features = false, features = ["with-geo"] }
 js-sys = "0.3.69"
 log = "0.4.20"
 serde = "1.0.188"
